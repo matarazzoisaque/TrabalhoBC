@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Urna | Urna Eletronica</title>
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/urna.css">
+    <script defer src="../js/main.js"></script>
+    <script defer src="../js/urna.js"></script>
+  </head>
+  <body data-pagina="urna">
+    <header class="cabecalho"><a class="marca" href="../index.html">Urna Eletronica</a></header>
+    <main class="conteudo">
+      <section class="painel urna-painel" aria-labelledby="titulo-urna">
+        <p class="rotulo">Votacao</p>
+        <h1 id="titulo-urna">Digite o numero do candidato</h1>
+        <form id="form-urna" class="formulario urna-formulario">
+          <label for="numero-candidato">Numero</label>
+          <input id="numero-candidato" name="numero" inputmode="numeric" maxlength="2" required>
+          <div class="acoes"><button class="botao" type="submit">Confirmar</button><button class="botao botao-secundario" type="reset">Corrigir</button></div>
+        </form>
+        <p id="urna-mensagem" class="mensagem" aria-live="polite"></p>
+      </section>
+    </main>
+  </body>
+</html>

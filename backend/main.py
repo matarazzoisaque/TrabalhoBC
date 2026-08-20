@@ -1,6 +1,8 @@
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 import json
+import mimetypes
 import sys
 
 
@@ -10,45 +12,46 @@ FRONTEND_DIR = ROOT_DIR / "frontend"
 
 sys.path.insert(0, str(BASE_DIR))
 
-from controle.urna_controle import UrnaControle
+from controle.controle import Controle
 
 
 HOST = "127.0.0.1"
 PORTA = 8080
-urna_controle = UrnaControle()
+controle = Controle()
 
 
 class ServidorUrna(SimpleHTTPRequestHandler):
+    """Servidor local para o frontend e a API inicial da urna."""
+
     def do_GET(self):
-        rota = self.path.split("?", 1)[0]
-
-        if rota in ("/", "/index.html"):
-            self.enviar_arquivo(FRONTEND_DIR / "html" / "index.html", "text/html")
-            return
-
-        if rota == "/css/main.css":
-            self.enviar_arquivo(FRONTEND_DIR / "css" / "main.css", "text/css")
-            return
-
-        if rota == "/js/main.js":
-            self.enviar_arquivo(FRONTEND_DIR / "js" / "main.js", "text/javascript")
-            return
+        rota = urlparse(self.path).path
 
         if rota == "/api/status":
-            self.enviar_json(urna_controle.status())
+            self.enviar_json(controle.status())
             return
 
-        if rota == "/api/professores":
-            self.enviar_json(urna_controle.listar_professores())
+        if rota == "/api/ranking":
+            self.enviar_json(controle.listar_ranking())
             return
 
-        self.send_error(404, "Recurso nao encontrado")
+        self.enviar_recurso_frontend(rota)
+
+    def enviar_recurso_frontend(self, rota):
+        caminho_relativo = "index.html" if rota in ("/", "/index.html") else rota.lstrip("/")
+        caminho = (FRONTEND_DIR / unquote(caminho_relativo)).resolve()
+
+        if FRONTEND_DIR not in caminho.parents and caminho != FRONTEND_DIR:
+            self.send_error(403, "Recurso nao permitido")
+            return
+
+        if not caminho.is_file():
+            self.send_error(404, "Recurso nao encontrado")
+            return
+
+        tipo, _ = mimetypes.guess_type(caminho.name)
+        self.enviar_arquivo(caminho, tipo or "application/octet-stream")
 
     def enviar_arquivo(self, caminho, tipo):
-        if not caminho.exists():
-            self.send_error(404, "Arquivo nao encontrado")
-            return
-
         conteudo = caminho.read_bytes()
         self.send_response(200)
         self.send_header("Content-Type", f"{tipo}; charset=utf-8")
@@ -57,7 +60,7 @@ class ServidorUrna(SimpleHTTPRequestHandler):
         self.wfile.write(conteudo)
 
     def enviar_json(self, dados):
-        conteudo = json.dumps(dados).encode("utf-8")
+        conteudo = json.dumps(dados, ensure_ascii=False).encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(conteudo)))
