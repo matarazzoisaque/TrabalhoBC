@@ -1,41 +1,30 @@
 # TrabalhoBC
 
-Estrutura inicial do projeto com frontend em HTML/CSS/JavaScript, backend em
-Python e pasta reservada para scripts/configuracoes do SQL Server.
+Projeto academico de uma urna para votacao dos melhores professores, usando
+frontend em HTML/CSS/JavaScript, backend em Python com POO e DAO, e banco de
+dados SQL Server.
 
-## Estrutura
+## Estrutura Base
 
 ```text
 backend/
-  python/
-    main.py
-
-database/
-  sqlserver/
+  abstrato/
+  banco_dados/
+  dao/
+  modelo/
+  controle/
+  validacao/
 
 frontend/
   html/
-    index.html
   css/
-    main.css
   js/
-    main.js
+  assets/
+
+banco_dados/
+  sql_server/
 ```
 
-## Como executar
-
-Na raiz do projeto, execute:
-
-```bash
-python backend/python/main.py
-```
-
-Depois acesse:
-
-```text
-http://127.0.0.1:8000
-```
-
-O HTML carrega o CSS e o JavaScript. O JavaScript consulta o backend em Python
-pela rota `/api/status`. A conexao com o SQL Server sera adicionada em uma etapa
-posterior.
+As pastas `controle/` e `validacao/` foram planejadas como camadas separadas
+para receber as classes especificas de cada parte do sistema durante o
+desenvolvimento.
