@@ -10,9 +10,9 @@ dados SQL Server.
 backend/
   abstrato/
   banco_dados/
+  controle/
   dao/
   modelo/
-  controle/
   validacao/
 
 frontend/
@@ -28,3 +28,19 @@ banco_dados/
 As pastas `controle/` e `validacao/` foram planejadas como camadas separadas
 para receber as classes especificas de cada parte do sistema durante o
 desenvolvimento.
+
+## Execucao Inicial
+
+```bash
+python backend/main.py
+```
+
+Depois acesse:
+
+```text
+http://127.0.0.1:8080
+```
+
+O arquivo `frontend/html/index.html` carrega `frontend/css/main.css` e
+`frontend/js/main.js`. O JavaScript consulta o backend Python pelas rotas
+`/api/status` e `/api/professores`.
