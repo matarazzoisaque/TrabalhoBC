@@ -1,27 +1,92 @@
 <!doctype html>
 <html lang="pt-BR">
   <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Urna | Urna Eletronica</title>
+    <title>Votação | Urna Eletrônica</title>
+    <link rel="icon" href="data:,">
     <link rel="stylesheet" href="../css/main.css">
     <link rel="stylesheet" href="../css/urna.css">
     <script defer src="../js/main.js"></script>
+    <script defer src="../js/urna-data.js"></script>
     <script defer src="../js/urna.js"></script>
   </head>
-  <body data-pagina="urna">
-    <header class="cabecalho"><a class="marca" href="../index.html">Urna Eletronica</a></header>
-    <main class="conteudo">
-      <section class="painel urna-painel" aria-labelledby="titulo-urna">
-        <p class="rotulo">Votacao</p>
-        <h1 id="titulo-urna">Digite o numero do candidato</h1>
-        <form id="form-urna" class="formulario urna-formulario">
-          <label for="numero-candidato">Numero</label>
-          <input id="numero-candidato" name="numero" inputmode="numeric" maxlength="2" required>
-          <div class="acoes"><button class="botao" type="submit">Confirmar</button><button class="botao botao-secundario" type="reset">Corrigir</button></div>
-        </form>
-        <p id="urna-mensagem" class="mensagem" aria-live="polite"></p>
+  <body class="pagina-urna" data-pagina="urna">
+    <main class="experiencia-urna">
+      <div class="sala-cenario" aria-hidden="true"><div class="quadro-sala"></div><div class="janela-sala"></div><div class="carteiras-fundo"><span></span><span></span></div></div>
+      <section id="identificacao" class="identificacao" aria-labelledby="titulo-identificacao">
+        <div class="identificacao-papel">
+          <p class="identificacao-selo">Entrada da seção</p>
+          <h1 id="titulo-identificacao">Identificação do eleitor</h1>
+          <p class="identificacao-intro">Preencha seus dados para iniciar a votação.</p>
+          <form id="form-identificacao" class="form-identificacao" novalidate>
+            <label for="registration">RA / Matrícula</label>
+            <input id="registration" name="registration" autocomplete="username" maxlength="30" required>
+            <span class="campo-erro" data-error-for="registration"></span>
+            <label for="first-name">Primeiro nome</label>
+            <input id="first-name" name="firstName" autocomplete="given-name" maxlength="60" required>
+            <span class="campo-erro" data-error-for="firstName"></span>
+            <label for="last-name">Último nome</label>
+            <input id="last-name" name="lastName" autocomplete="family-name" maxlength="60" required>
+            <span class="campo-erro" data-error-for="lastName"></span>
+            <button class="botao-iniciar" type="submit">INICIAR VOTAÇÃO</button>
+            <p id="identificacao-mensagem" class="identificacao-mensagem" aria-live="polite"></p>
+          </form>
+        </div>
+      </section>
+
+      <section id="votacao" class="cabine" aria-labelledby="titulo-urna" hidden>
+        <div class="voting-booth">
+          <section class="escudo" aria-label="Escudo de privacidade">
+            <div class="escudo-aba escudo-aba-esquerda"></div>
+            <div class="escudo-centro"><span>SEÇÃO ELEITORAL</span></div>
+            <div class="escudo-aba escudo-aba-direita"></div>
+          </section>
+          
+          <section class="urna-maquina" aria-label="Urna eletrônica">
+            <div class="urna-corpo">
+              <div class="urna-display">
+                <div class="display-cabecalho"><span id="titulo-urna">VOTAÇÃO</span><span id="cargo-votacao"></span></div>
+                <div class="display-conteudo" aria-live="polite">
+                  <div class="numero-label">NÚMERO</div>
+                  <div id="numero-digitado" class="numero-digitado" aria-label="Número digitado">&nbsp;</div>
+                  <div id="estado-votacao" class="estado-votacao">Digite o número do candidato</div>
+                  <div id="dados-candidato" class="dados-candidato" hidden>
+                    <div class="foto-candidato"><img id="foto-candidato" alt=""><span id="fallback-foto">?</span></div>
+                    <div><strong id="nome-candidato"></strong><span id="partido-candidato"></span><span id="funcao-candidato"></span></div>
+                  </div>
+                </div>
+              </div>
+              <div class="urna-teclado" aria-label="Teclado da urna">
+                <div class="teclas-numericas">
+                  <button type="button" class="tecla tecla-numero" data-digito="1">1</button><button type="button" class="tecla tecla-numero" data-digito="2">2</button><button type="button" class="tecla tecla-numero" data-digito="3">3</button>
+                  <button type="button" class="tecla tecla-numero" data-digito="4">4</button><button type="button" class="tecla tecla-numero" data-digito="5">5</button><button type="button" class="tecla tecla-numero" data-digito="6">6</button>
+                  <button type="button" class="tecla tecla-numero" data-digito="7">7</button><button type="button" class="tecla tecla-numero" data-digito="8">8</button><button type="button" class="tecla tecla-numero" data-digito="9">9</button>
+                  <span aria-hidden="true"></span><button type="button" class="tecla tecla-numero" data-digito="0">0</button><span aria-hidden="true"></span>
+                </div>
+                <div class="teclas-acoes">
+                  <button type="button" class="tecla tecla-branco" data-acao="branco">BRANCO</button>
+                  <button type="button" class="tecla tecla-corrige" data-acao="corrige">CORRIGE</button>
+                  <button type="button" class="tecla tecla-confirma" data-acao="confirma">CONFIRMA</button>
+                </div>
+              </div>
+            </div>
+          </section>
+          
+          <section class="mesa" aria-label="Mesa de votação">
+            <div class="tampo-mesa"></div>
+            <div class="pernas-mesa" aria-hidden="true"><span></span><span></span></div>
+          </section>
+        </div>
+        
+        <p id="urna-mensagem" class="urna-mensagem" aria-live="polite"></p>
       </section>
     </main>
+    <button id="abrir-santinho" class="botao-ajuda" type="button" aria-label="Ver candidatos e números" aria-controls="santinho" aria-expanded="false">?</button>
+    <dialog id="santinho" class="santinho" aria-labelledby="titulo-santinho">
+      <div class="santinho-cabecalho"><h2 id="titulo-santinho">Candidatos</h2><button id="fechar-santinho" class="fechar-santinho" type="button" aria-label="Fechar lista de candidatos">X</button></div>
+      <p class="santinho-intro">Consulte os números antes de votar.</p>
+      <div id="lista-candidatos" class="lista-candidatos"></div>
+    </dialog>
   </body>
 </html>
