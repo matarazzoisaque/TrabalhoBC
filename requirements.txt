@@ -1,0 +1,2 @@
+# Nenhuma dependência externa é necessária: sqlite3 já é nativo do Python.
+# Versão mínima recomendada: Python 3.10+

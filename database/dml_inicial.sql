@@ -1,0 +1,2 @@
+-- Dados iniciais (administrador, categorias, autores, editoras, livros, exemplares).
+-- Pendente — será definido junto com o ddl.sql.

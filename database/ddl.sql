@@ -1,0 +1,2 @@
+-- Criação de tabelas, PKs, FKs, CHECK, UNIQUE e demais restrições.
+-- Pendente — será definido a partir do DER nas próximas etapas.
