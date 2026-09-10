@@ -1,0 +1,176 @@
+/* Estilos do sistema. CSS puro, sem framework. */
+
+:root {
+    --cor-fundo: #f4f5f7;
+    --cor-superficie: #ffffff;
+    --cor-borda: #d8dbe0;
+    --cor-texto: #1f2430;
+    --cor-texto-fraco: #5c6472;
+    --cor-destaque: #2f5d8c;
+    --cor-erro: #b3261e;
+    --cor-sucesso: #1e6b3a;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Segoe UI, Arial, sans-serif;
+    background-color: var(--cor-fundo);
+    color: var(--cor-texto);
+    line-height: 1.5;
+}
+
+/* Cabeçalho e menu */
+
+.cabecalho {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 2rem;
+    background-color: var(--cor-destaque);
+    color: #ffffff;
+}
+
+.cabecalho h1 {
+    margin: 0;
+    font-size: 1.4rem;
+}
+
+.menu a {
+    margin-left: 1.5rem;
+    color: #ffffff;
+    text-decoration: none;
+    opacity: 0.8;
+}
+
+.menu a:hover,
+.menu a.ativo {
+    opacity: 1;
+    text-decoration: underline;
+}
+
+/* Conteúdo */
+
+.conteudo {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.conteudo h2 {
+    margin-top: 0;
+    font-size: 1.2rem;
+}
+
+/* Mensagens de retorno da API */
+
+.mensagem {
+    margin: 0 0 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+    background-color: #e8eaee;
+    color: var(--cor-texto-fraco);
+}
+
+.mensagem:empty {
+    display: none;
+}
+
+.mensagem.erro {
+    background-color: #fbe9e7;
+    color: var(--cor-erro);
+}
+
+.mensagem.sucesso {
+    background-color: #e6f4ea;
+    color: var(--cor-sucesso);
+}
+
+/* Tabela do acervo */
+
+.tabela {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: var(--cor-superficie);
+    border: 1px solid var(--cor-borda);
+}
+
+.tabela th,
+.tabela td {
+    padding: 0.7rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--cor-borda);
+}
+
+.tabela th {
+    background-color: #eceef2;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.tabela tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Formulário de cadastro */
+
+.formulario {
+    max-width: 420px;
+    padding: 1.5rem;
+    background-color: var(--cor-superficie);
+    border: 1px solid var(--cor-borda);
+    border-radius: 4px;
+}
+
+.campo {
+    margin-bottom: 1rem;
+}
+
+.campo label {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-size: 0.9rem;
+    color: var(--cor-texto-fraco);
+}
+
+.campo input {
+    width: 100%;
+    padding: 0.55rem 0.7rem;
+    font-size: 1rem;
+    font-family: inherit;
+    color: inherit;
+    border: 1px solid var(--cor-borda);
+    border-radius: 4px;
+    background-color: #ffffff;
+}
+
+.campo input:focus {
+    outline: 2px solid var(--cor-destaque);
+    outline-offset: 1px;
+}
+
+.botao {
+    padding: 0.6rem 1.4rem;
+    font-size: 1rem;
+    font-family: inherit;
+    color: #ffffff;
+    background-color: var(--cor-destaque);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.botao:hover {
+    background-color: #24486d;
+}
+
+.botao:disabled {
+    opacity: 0.6;
+    cursor: default;
+}

@@ -1,7 +1,17 @@
+# Python
 __pycache__/
 *.py[cod]
 .venv/
 venv/
+
+# Variáveis de ambiente
 .env
-.env.*
-!.env.example
+
+# Editores e sistema operacional
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+
+# Ferramentas locais
+.superpowers/

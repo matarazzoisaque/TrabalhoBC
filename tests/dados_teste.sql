@@ -1,2 +1,0 @@
--- Dados usados nos testes automatizados.
--- Pendente — será definido junto com o ddl.sql.

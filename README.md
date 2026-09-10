@@ -1,275 +1,180 @@
-# book-book
+# Biblioteca
 
-Sistema acadêmico de gerenciamento de biblioteca (livros, exemplares, leitores
-e empréstimos), com back-end em Python (arquitetura em camadas: controllers,
-services, repositories) e SQLite, e front-end em HTML/CSS/JavaScript puro.
+Sistema acadêmico de gerenciamento de biblioteca. Back-end em **Python puro**,
+front-end em **HTML, CSS e JavaScript puros** e banco de dados **MySQL** —
+sem frameworks.
 
-> Integrantes, RAs e objetivo detalhado do trabalho: **pendente de
-> preenchimento**.
+> Integrantes, RAs e objetivo detalhado do trabalho: **pendente de preenchimento**.
 
 ## Tecnologias
 
-- **Back-end:** Python 3.10+ (biblioteca padrão — `http.server`, `sqlite3`)
-- **Banco de dados:** SQLite
-- **Front-end:** HTML, CSS e JavaScript (sem framework)
+- **Back-end:** Python 3.10+ (`http.server` e `json`, da biblioteca padrão)
+- **Banco de dados:** MySQL 8+ (driver `mysql-connector-python`)
+- **Front-end:** HTML, CSS e JavaScript puros (sem framework, sem build)
 
-## Estrutura Completa
+## Estrutura do projeto
 
 ```text
-book-book/
+biblioteca/
 ├── README.md
 ├── .gitignore
-├── requirements.txt
+├── requirements.txt                    # mysql-connector-python
 │
 ├── app/
-│   ├── main.py
+│   ├── main.py                         # monta a aplicação e sobe o servidor
 │   │
-│   ├── config/
-│   │   └── database.py
+│   ├── core/
+│   │   ├── database.py                 # classe Database (conexão MySQL)
+│   │   └── servidor.py                 # classe Servidor (HTTP + rotas)
 │   │
-│   ├── controllers/
-│   │   ├── auth_controller.py
-│   │   ├── autor_controller.py
-│   │   ├── categoria_controller.py
-│   │   ├── editora_controller.py
-│   │   ├── livro_controller.py
-│   │   ├── exemplar_controller.py
-│   │   ├── leitor_controller.py
-│   │   └── emprestimo_controller.py
+│   ├── models/
+│   │   └── livro.py                    # classe Livro
 │   │
 │   ├── repositories/
-│   │   ├── administrador_repository.py
-│   │   ├── autor_repository.py
-│   │   ├── categoria_repository.py
-│   │   ├── editora_repository.py
-│   │   ├── livro_repository.py
-│   │   ├── exemplar_repository.py
-│   │   ├── leitor_repository.py
-│   │   ├── emprestimo_repository.py
-│   │   └── auditoria_repository.py
+│   │   └── livro_repository.py         # classe LivroRepository (SQL)
 │   │
-│   ├── services/
-│   │   ├── auth_service.py
-│   │   ├── livro_service.py
-│   │   ├── leitor_service.py
-│   │   ├── exemplar_service.py
-│   │   ├── emprestimo_service.py
-│   │   └── auditoria_service.py
-│   │
-│   └── utils/
-│       ├── datas.py
-│       ├── respostas.py
-│       ├── seguranca.py
-│       └── validadores.py
+│   └── services/
+│       └── livro_service.py            # classe LivroService (regras)
+│
+├── config/
+│   └── config.py                       # host, usuário, senha, banco, porta
 │
 ├── database/
-│   ├── book_book.db
-│   ├── ddl.sql
-│   ├── dml_inicial.sql
-│   ├── consultas_testes.sql
-│   └── README.md
+│   ├── ddl.sql                         # CREATE DATABASE e CREATE TABLE
+│   └── dml_inicial.sql                 # livros de exemplo
 │
 ├── frontend/
-│   ├── index.html
-│   ├── login.html
-│   ├── livros.html
-│   ├── cadastro-livro.html
-│   ├── informacoes-livro.html
-│   ├── exemplares.html
-│   ├── emprestar-livro.html
-│   ├── devolver-livro.html
-│   ├── leitores.html
-│   ├── cadastro-leitor.html
-│   │
-│   ├── components/
-│   │   ├── navbar.html
-│   │   ├── sidebar.html
-│   │   ├── modal-confirmacao.html
-│   │   └── mensagens.html
-│   │
+│   ├── index.html                      # lista os livros do acervo
+│   ├── cadastro.html                   # formulário de cadastro
 │   └── assets/
 │       ├── css/
-│       │   ├── global.css
-│       │   ├── login.css
-│       │   ├── livros.css
-│       │   ├── leitores.css
-│       │   ├── exemplares.css
-│       │   └── emprestimos.css
-│       │
-│       ├── js/
-│       │   ├── api.js
-│       │   ├── auth.js
-│       │   ├── livros.js
-│       │   ├── cadastro-livro.js
-│       │   ├── informacoes-livro.js
-│       │   ├── leitores.js
-│       │   ├── cadastro-leitor.js
-│       │   ├── exemplares.js
-│       │   ├── emprestimos.js
-│       │   └── validacoes.js
-│       │
-│       └── img/
-│           ├── logo-book-book.png
-│           └── icone-livro.png
+│       │   └── style.css
+│       └── js/
+│           ├── api.js                  # classe Api (chamadas ao back-end)
+│           └── livros.js               # classe TelaLivros (telas de livro)
 │
 ├── docs/
-│   ├── mer.png
 │   ├── der.png
 │   ├── regras-negocio.md
-│   ├── manual-instalacao.md
-│   ├── planejamento-projeto.pdf
-│   │
-│   ├── evidencias/
-│   │   ├── 01-login.png
-│   │   ├── 02-listagem-livros.png
-│   │   ├── 03-cadastro-livro.png
-│   │   ├── 04-edicao-livro.png
-│   │   ├── 05-informacoes-livro.png
-│   │   ├── 06-adicionar-exemplar.png
-│   │   ├── 07-excluir-exemplar.png
-│   │   ├── 08-cadastro-leitor.png
-│   │   ├── 09-edicao-leitor.png
-│   │   ├── 10-emprestimo.png
-│   │   ├── 11-devolucao.png
-│   │   ├── 12-auditoria.png
-│   │   └── 13-persistencia-sqlite.png
-│   │
-│   └── apresentacao/
-│       └── book-book-apresentacao.pdf
+│   └── evidencias/                     # prints de tela do sistema
 │
 └── tests/
-    ├── test_database.py
-    ├── test_autenticacao.py
-    ├── test_livros.py
-    ├── test_leitores.py
-    ├── test_exemplares.py
-    ├── test_emprestimos.py
-    └── dados_teste.sql
+    └── test_livro.py                   # validações do livro
 ```
-
-> Arquivos binários ainda não produzidos (logo, ícones, diagramas MER/DER,
-> capturas de tela de evidências e PDFs de planejamento/apresentação) têm
-> suas pastas versionadas via `.gitkeep` e serão adicionados conforme forem
-> gerados.
 
 ## Função de cada área
 
 | Pasta ou arquivo | Finalidade |
 |---|---|
-| `README.md` | Documento principal: integrantes, RAs, objetivo, tecnologias, instalação, DER, regras de negócio e prints |
-| `.gitignore` | Impede envio de arquivos desnecessários, como `__pycache__`, ambientes virtuais e arquivos temporários |
-| `requirements.txt` | Informa dependências; inicialmente contém apenas a versão mínima do Python, pois `sqlite3` já é nativo |
-| `app/` | Todo o código Python do back-end |
-| `app/main.py` | Inicia o servidor local e direciona requisições do front-end |
-| `app/config/database.py` | Centraliza a conexão e configuração do SQLite |
-| `app/controllers/` | Recebe as requisições, chama serviços e devolve respostas para o front-end |
-| `app/repositories/` | Contém os comandos SQL diretos: `INSERT`, `SELECT`, `UPDATE` e `DELETE` |
-| `app/services/` | Concentra regras de negócio, como prazo de sete dias, limite de três empréstimos e atualização de status |
-| `app/utils/` | Funções reutilizáveis para datas, validações, segurança de senha e mensagens de resposta |
-| `database/` | Banco SQLite e scripts SQL usados para criar e popular o banco |
-| `database/ddl.sql` | Criação de tabelas, PKs, FKs, `CHECK`, `UNIQUE` e demais restrições |
-| `database/dml_inicial.sql` | Dados iniciais para demonstrar o sistema (administrador, categorias, autores, editoras, livros e exemplares) |
-| `database/consultas_testes.sql` | Consultas SQL usadas para testar e demonstrar registros, empréstimos, devoluções e auditoria |
-| `frontend/` | Páginas HTML do sistema e seus recursos estáticos |
-| `frontend/components/` | Partes reutilizáveis da interface, como menu, barra lateral, modal e mensagens |
-| `frontend/assets/css/` | Arquivos de estilização separados por tela ou funcionalidade |
-| `frontend/assets/js/` | Scripts JavaScript de integração com o back-end, formulários, buscas e validações |
-| `docs/` | Documentação técnica e acadêmica exigida pelo trabalho |
-| `docs/evidencias/` | Capturas de tela que comprovam interface, CRUD e persistência dos dados |
-| `tests/` | Testes manuais ou automatizados das funções mais importantes |
+| `README.md` | Documento principal do trabalho |
+| `.gitignore` | Impede o envio de arquivos desnecessários (`__pycache__`, ambientes virtuais, arquivos de editor) |
+| `requirements.txt` | Dependências do projeto — apenas o driver do MySQL |
+| `app/main.py` | Monta banco → repositório → service → servidor e inicia a aplicação |
+| `app/core/database.py` | Abre a conexão com o MySQL e executa os comandos SQL |
+| `app/core/servidor.py` | Entrega os arquivos do front-end e responde às rotas `/api/*` |
+| `app/models/livro.py` | Representa um livro e converte entre objeto e dicionário |
+| `app/repositories/` | Única camada que conhece SQL: `SELECT` e `INSERT` da tabela `livros` |
+| `app/services/` | Regras de negócio e validações aplicadas antes de gravar |
+| `config/config.py` | Centraliza os dados de acesso ao banco e o endereço do servidor |
+| `database/ddl.sql` | Cria o banco `biblioteca` e a tabela `livros` com suas restrições |
+| `database/dml_inicial.sql` | Insere livros de exemplo para demonstração |
+| `frontend/` | Páginas HTML e recursos estáticos do sistema |
+| `frontend/assets/js/api.js` | Concentra toda a comunicação HTTP com o back-end |
+| `frontend/assets/js/livros.js` | Monta a listagem e trata o envio do formulário |
+| `docs/` | Documentação técnica e acadêmica do trabalho |
+| `docs/evidencias/` | Capturas de tela que comprovam o funcionamento |
+| `tests/test_livro.py` | Testes automatizados das validações de livro |
 
-## Modelo de dados (DER)
+## Como executar
 
-```mermaid
-erDiagram
-    AUTORES ||--o{ LIVROS : "é autor principal de"
-    CATEGORIAS ||--o{ LIVROS : classifica
-    EDITORAS ||--o{ LIVROS : publica
-    LIVROS ||--o{ EXEMPLARES : possui
-    LEITORES ||--o{ EMPRESTIMOS : realiza
-    EXEMPLARES ||--o{ EMPRESTIMOS : participa
+### 1. Criar o banco de dados
 
-    ADMINISTRADORES {
-        INTEGER id_administrador PK
-        TEXT nome
-        TEXT usuario UK
-        TEXT senha_hash
-        TEXT data_cadastro
-    }
-    LEITORES {
-        INTEGER id_leitor PK
-        TEXT nome
-        TEXT cpf UK
-        TEXT telefone
-        TEXT data_cadastro
-    }
-    AUTORES {
-        INTEGER id_autor PK
-        TEXT nome
-    }
-    CATEGORIAS {
-        INTEGER id_categoria PK
-        TEXT categoria UK
-    }
-    EDITORAS {
-        INTEGER id_editora PK
-        TEXT nome UK
-    }
-    LIVROS {
-        INTEGER id_livro PK
-        TEXT titulo
-        TEXT responsaveis
-        TEXT edicao
-        INTEGER ano_publicacao
-        INTEGER numero_paginas
-        TEXT sinopse
-        INTEGER id_autor FK
-        INTEGER id_categoria FK
-        INTEGER id_editora FK
-    }
-    EXEMPLARES {
-        INTEGER id_exemplar PK
-        TEXT cod_tombo
-        INTEGER id_livro FK
-        TEXT status
-    }
-    EMPRESTIMOS {
-        INTEGER id_emprestimo PK
-        INTEGER id_leitor FK
-        INTEGER id_exemplar FK
-        TEXT data_emprestimo
-        TEXT data_prevista_devolucao
-        TEXT data_devolucao
-        TEXT status
-    }
+```bash
+mysql -u root -p < database/ddl.sql
+mysql -u root -p < database/dml_inicial.sql
 ```
 
-O schema SQL (`database/ddl.sql`) ainda será implementado a partir deste
-modelo nas próximas etapas.
+### 2. Ajustar as credenciais
 
-## Estado atual
+Edite `config/config.py` com o usuário e a senha do seu MySQL:
 
-Esta etapa entrega a **estrutura completa do projeto já com o back-end
-conectado ao front-end**, mas sem regras de negócio implementadas:
+```python
+DB_HOST = "localhost"
+DB_PORT = 3306
+DB_USER = "root"
+DB_PASSWORD = ""
+DB_NAME = "biblioteca"
+```
 
-- `app/main.py` sobe um servidor HTTP (biblioteca padrão do Python) que serve
-  os arquivos estáticos de `frontend/` e roteia `/api/*` para os
-  controllers correspondentes.
-- A rota `GET /api/status` já responde de verdade e é consumida por
-  `frontend/assets/js/api.js` — a página `index.html` exibe o resultado
-  dessa checagem ao carregar, confirmando que front-end e back-end estão
-  conectados.
-- As demais rotas (`/api/autores`, `/api/livros`, `/api/leitores`, etc.)
-  já estão roteadas até os controllers correspondentes, mas retornam
-  `501 Não implementado` — a lógica de negócio de cada uma será adicionada
-  nas próximas etapas.
+### 3. Instalar a dependência
 
-## Instalação e execução
+```bash
+pip install -r requirements.txt
+```
 
-Veja [`docs/manual-instalacao.md`](docs/manual-instalacao.md).
+### 4. Subir o servidor
+
+A partir da raiz do projeto:
 
 ```bash
 python -m app.main
 ```
 
-Depois acesse `http://127.0.0.1:8000`.
+Depois acesse **http://127.0.0.1:8000**.
+
+### 5. Rodar os testes
+
+```bash
+python -m unittest tests.test_livro
+```
+
+Os testes usam um repositório falso, então rodam sem MySQL instalado.
+
+## Como o front-end conversa com o back-end
+
+O mesmo servidor entrega as páginas e responde à API, então não há
+configuração de CORS nem endereço fixo no JavaScript:
+
+```
+navegador                     app/core/servidor.py
+   │                                  │
+   │  GET /                           │──► entrega frontend/index.html
+   │  GET /assets/js/api.js           │──► entrega o arquivo estático
+   │                                  │
+   │  GET /api/livros                 │──► LivroService.listar()
+   │                                  │      └► LivroRepository → SELECT
+   │  ◄── 200 [ {...}, {...} ]        │
+   │                                  │
+   │  POST /api/livros                │──► LivroService.cadastrar()
+   │       {titulo, autor, ano}       │      ├► validações
+   │                                  │      └► LivroRepository → INSERT
+   │  ◄── 201 { id_livro: 6, ... }    │
+```
+
+### Rotas disponíveis
+
+| Método | Rota | O que faz | Respostas |
+|---|---|---|---|
+| `GET` | `/api/livros` | Lista todos os livros, em ordem de título | `200` |
+| `POST` | `/api/livros` | Cadastra um livro | `201`, `400` |
+
+Qualquer rota `/api/*` desconhecida devolve `404`. Erros de validação
+devolvem `400`, e falhas de conexão com o MySQL devolvem `503` — sempre em
+JSON, com a chave `erro`.
+
+## Modelo de dados
+
+![DER do sistema](docs/der.png)
+
+Regras de negócio detalhadas em [`docs/regras-negocio.md`](docs/regras-negocio.md).
+
+## Estado atual
+
+Esta etapa entrega a **estrutura completa do projeto com o back-end já
+conectado ao front-end**:
+
+- `index.html` busca os livros em `GET /api/livros` e monta a tabela.
+- `cadastro.html` envia o formulário para `POST /api/livros`, que valida os
+  dados e grava no MySQL.
+
+Leitores, exemplares e empréstimos entram nas próximas etapas.

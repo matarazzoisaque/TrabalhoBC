@@ -1,2 +1,0 @@
--- Consultas usadas para testar e demonstrar registros, empréstimos, devoluções e auditoria.
--- Pendente — será definido junto com o ddl.sql.

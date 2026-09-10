@@ -1,23 +1,39 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>book-book</title>
-  <link rel="stylesheet" href="assets/css/global.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biblioteca — Acervo</title>
+    <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-  <div id="app">
-    <h1>book-book</h1>
-    <p id="status-conexao">Verificando conexão com o backend...</p>
-  </div>
+    <header class="cabecalho">
+        <h1>Biblioteca</h1>
+        <nav class="menu">
+            <a href="index.html" class="ativo">Acervo</a>
+            <a href="cadastro.html">Cadastrar livro</a>
+        </nav>
+    </header>
 
-  <script src="assets/js/api.js"></script>
-  <script>
-    verificarConexaoBackend().then((resposta) => {
-      const elemento = document.getElementById("status-conexao");
-      elemento.textContent = resposta.ok ? `✅ ${resposta.mensagem}` : `❌ ${resposta.mensagem}`;
-    });
-  </script>
+    <main class="conteudo">
+        <h2>Livros cadastrados</h2>
+
+        <p id="mensagem" class="mensagem" role="status"></p>
+
+        <table class="tabela" id="tabela-livros" hidden>
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Título</th>
+                    <th>Autor</th>
+                    <th>Ano</th>
+                </tr>
+            </thead>
+            <tbody id="corpo-tabela"></tbody>
+        </table>
+    </main>
+
+    <script src="assets/js/api.js" defer></script>
+    <script src="assets/js/livros.js" defer></script>
 </body>
 </html>

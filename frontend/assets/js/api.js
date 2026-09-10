@@ -1,18 +1,45 @@
-const API_BASE_URL = "http://127.0.0.1:8000/api";
+/* Comunicação com o back-end.
+ *
+ * A classe Api concentra todas as chamadas HTTP. Nenhuma outra parte do
+ * front-end usa fetch diretamente. */
 
-async function apiRequest(caminho, opcoes = {}) {
-  const resposta = await fetch(`${API_BASE_URL}/${caminho}`, {
-    headers: { "Content-Type": "application/json" },
-    ...opcoes,
-  });
-  return resposta.json();
-}
+class Api {
+    constructor(base = '/api') {
+        this.base = base;
+    }
 
-async function verificarConexaoBackend() {
-  try {
-    const resposta = await fetch(`${API_BASE_URL}/status`);
-    return await resposta.json();
-  } catch (erro) {
-    return { ok: false, mensagem: "Não foi possível conectar ao backend." };
-  }
+    /* Busca todos os livros cadastrados. */
+    async listarLivros() {
+        return this.requisitar('/livros');
+    }
+
+    /* Envia um novo livro para ser cadastrado. */
+    async cadastrarLivro(livro) {
+        return this.requisitar('/livros', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(livro)
+        });
+    }
+
+    /* Faz a requisição e transforma erro do servidor em exceção. */
+    async requisitar(caminho, opcoes = {}) {
+        let resposta;
+        try {
+            resposta = await fetch(this.base + caminho, opcoes);
+        } catch (erro) {
+            throw new Error('Não foi possível falar com o servidor. Ele está rodando?');
+        }
+
+        const corpo = await resposta.json().catch(() => null);
+
+        if (!resposta.ok) {
+            const mensagem = corpo && corpo.erro
+                ? corpo.erro
+                : `Erro ${resposta.status} ao acessar o servidor.`;
+            throw new Error(mensagem);
+        }
+
+        return corpo;
+    }
 }
