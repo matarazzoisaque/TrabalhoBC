@@ -1,74 +1,64 @@
 """Regras de negócio dos livros.
 
-Fica entre o servidor HTTP e o repositório: valida o que chega do front-end
-antes de deixar qualquer dado chegar ao banco.
+O service decide se o pedido deve acontecer; o repositório só executa.
+Operações que podem ser recusadas devolvem uma tupla (ok, dados_ou_erros),
+que o Servidor traduz em status HTTP.
 """
 
 from datetime import date
 
+from pydantic import ValidationError
+
 from app.models.livro import Livro
+from app.repositories.livro_repository import LivroRepository
 
-ANO_MINIMO = 1450
-TAMANHO_MAXIMO_TITULO = 200
-TAMANHO_MAXIMO_AUTOR = 150
-
-
-class ErroValidacao(Exception):
-    """Os dados enviados pelo usuário não passaram na validação."""
+# Filtros que a tela pode enviar na listagem.
+FILTROS = ("busca", "autor", "genero", "ordem")
 
 
 class LivroService:
     """Valida e coordena as operações com livros."""
 
-    def __init__(self, repositorio):
-        self._repositorio = repositorio
+    def __init__(self, repository: LivroRepository):
+        self.repository = repository
 
-    def listar(self):
-        """Devolve todos os livros como lista de dicionários."""
-        livros = self._repositorio.listar_todos()
-        return [livro.para_dicionario() for livro in livros]
+    def cadastrar(self, dados: dict) -> tuple[bool, dict | list[str]]:
+        """Valida, checa duplicata e cria o livro.
 
-    def cadastrar(self, dados):
-        """Valida os dados recebidos e grava um novo livro."""
-        titulo = self._texto_obrigatorio(
-            dados.get("titulo"), "título", TAMANHO_MAXIMO_TITULO
-        )
-        autor = self._texto_obrigatorio(
-            dados.get("autor"), "autor", TAMANHO_MAXIMO_AUTOR
-        )
-        ano = self._ano_valido(dados.get("ano_publicacao"))
-
-        livro = Livro(titulo=titulo, autor=autor, ano_publicacao=ano)
-        return self._repositorio.inserir(livro).para_dicionario()
-
-    @staticmethod
-    def _texto_obrigatorio(valor, nome_campo, tamanho_maximo):
-        """Garante que o campo veio preenchido e dentro do tamanho permitido."""
-        texto = str(valor).strip() if valor is not None else ""
-        if not texto:
-            raise ErroValidacao(f"O campo {nome_campo} é obrigatório.")
-        if len(texto) > tamanho_maximo:
-            raise ErroValidacao(
-                f"O campo {nome_campo} deve ter no máximo "
-                f"{tamanho_maximo} caracteres."
-            )
-        return texto
-
-    @staticmethod
-    def _ano_valido(valor):
-        """Garante que o ano de publicação é um número dentro de um intervalo real."""
-        if valor is None or str(valor).strip() == "":
-            raise ErroValidacao("O campo ano de publicação é obrigatório.")
+        O id e a data de cadastro são definidos pelo servidor, nunca pela tela.
+        """
         try:
-            ano = int(valor)
-        except (TypeError, ValueError):
-            raise ErroValidacao(
-                "O ano de publicação deve ser um número inteiro."
-            ) from None
+            livro = Livro.model_validate(dados)
+        except ValidationError as erro:
+            return False, Livro.mensagens_de_erro(erro)
 
-        ano_limite = date.today().year + 1
-        if ano < ANO_MINIMO or ano > ano_limite:
-            raise ErroValidacao(
-                f"O ano de publicação deve estar entre {ANO_MINIMO} e {ano_limite}."
-            )
-        return ano
+        if self.repository.existe_duplicado(livro.titulo, livro.autor):
+            return False, ["Já existe um livro com esse título e autor."]
+
+        livro = livro.model_copy(update={"id_livro": None, "data_cadastro": date.today()})
+        return True, self.repository.criar(livro).model_dump(mode="json")
+
+    def listar(self, filtros: dict) -> list[dict]:
+        """Remove os filtros vazios ou desconhecidos e repassa ao repositório."""
+        filtros = {
+            chave: valor.strip()
+            for chave, valor in filtros.items()
+            if chave in FILTROS and valor.strip()
+        }
+        return [livro.model_dump(mode="json") for livro in self.repository.listar(**filtros)]
+
+    def opcoes_de_filtro(self) -> dict[str, list[str]]:
+        """Autores e gêneros disponíveis para os filtros da tela."""
+        return self.repository.opcoes_de_filtro()
+
+    def detalhar(self, id):
+        """Busca o livro e devolve erro se ele não existir."""
+        raise NotImplementedError
+
+    def editar(self, id, dados):
+        """Confere se existe, valida, checa duplicata (com ignorar_id) e atualiza."""
+        raise NotImplementedError
+
+    def remover(self, id):
+        """Confere se existe e exclui (exclusão lógica)."""
+        raise NotImplementedError

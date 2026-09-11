@@ -1,121 +1,95 @@
 """Servidor HTTP do projeto.
 
-Usa apenas a biblioteca padrão do Python. Faz dois trabalhos:
+Entrega os arquivos do front-end e responde à API em JSON, chamando o
+LivroService. Nada de SQL, nada de validação.
 
-1. Entrega os arquivos estáticos da pasta `frontend/` (HTML, CSS e JS).
-2. Responde às rotas `/api/*` em JSON, chamando o service correspondente.
-
-Como as páginas e a API são servidas pelo mesmo endereço, o front-end
-conversa com o back-end sem precisar de configuração extra.
+O http.server cria uma instância desta classe a cada requisição, por isso
+o service fica guardado como atributo de classe (preenchido no main.py).
 """
 
 import json
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+from http.server import SimpleHTTPRequestHandler
 from pathlib import Path
+from urllib.parse import parse_qsl, urlsplit
 
 from app.core.database import ErroBanco
-from app.services.livro_service import ErroValidacao
 
 PASTA_FRONTEND = Path(__file__).resolve().parents[2] / "frontend"
-LIMITE_CORPO = 1024 * 1024  # 1 MB
+ROTA_LIVROS = "/api/livros"
+ROTA_FILTROS = "/api/livros/filtros"
 
 
-class Servidor:
-    """Sobe o servidor HTTP local e liga as rotas da API ao service."""
+class Servidor(SimpleHTTPRequestHandler):
+    """Recebe as requisições HTTP e devolve JSON ou arquivos do front-end."""
 
-    def __init__(self, host, porta, livro_service):
-        self._host = host
-        self._porta = porta
-        self._livro_service = livro_service
+    service = None  # LivroService, definido no main.py
 
-    def iniciar(self):
-        """Inicia o servidor e fica aguardando requisições."""
-        manipulador = self._criar_manipulador()
-        servidor = HTTPServer((self._host, self._porta), manipulador)
-        print(f"Servidor no ar em http://{self._host}:{self._porta}")
-        print("Pressione Ctrl+C para encerrar.")
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory=str(PASTA_FRONTEND), **kwargs)
+
+    def do_GET(self):
+        """/api/livros (com filtros), /api/livros/filtros e arquivos do front-end."""
+        rota = urlsplit(self.path)
         try:
-            servidor.serve_forever()
-        except KeyboardInterrupt:
-            print("\nEncerrando o servidor.")
-        finally:
-            servidor.server_close()
+            if rota.path == ROTA_LIVROS:
+                self._responder(200, self.service.listar(dict(parse_qsl(rota.query))))
+            elif rota.path == ROTA_FILTROS:
+                self._responder(200, self.service.opcoes_de_filtro())
+            else:
+                self._servir_estatico()
+        except ErroBanco as erro:
+            self._responder(503, {"erro": str(erro)})
 
-    def _criar_manipulador(self):
-        """Cria a classe que trata as requisições, já com o service injetado."""
-        livro_service = self._livro_service
+    def do_POST(self):
+        """/api/livros cadastra um livro."""
+        if urlsplit(self.path).path != ROTA_LIVROS:
+            self._responder(404, {"erro": "Rota não encontrada."})
+            return
+        try:
+            ok, resultado = self.service.cadastrar(self._ler_corpo())
+        except json.JSONDecodeError:
+            self._responder(400, {"erro": "O corpo enviado não é um JSON válido."})
+            return
+        except ErroBanco as erro:
+            self._responder(503, {"erro": str(erro)})
+            return
 
-        class Manipulador(SimpleHTTPRequestHandler):
-            """Trata cada requisição: arquivo estático ou rota da API."""
+        if ok:
+            self._responder(201, resultado)
+        else:
+            self._responder(400, {"erro": " ".join(resultado)})
 
-            def __init__(self, *args, **kwargs):
-                super().__init__(*args, directory=str(PASTA_FRONTEND), **kwargs)
+    def do_PUT(self):
+        """/api/livros/{id}: edita um livro."""
+        raise NotImplementedError
 
-            def do_GET(self):
-                if self.path.startswith("/api/"):
-                    self._tratar_api(self._get_api)
-                else:
-                    super().do_GET()
+    def do_DELETE(self):
+        """/api/livros/{id}: remove um livro (exclusão lógica)."""
+        raise NotImplementedError
 
-            def do_POST(self):
-                if self.path.startswith("/api/"):
-                    self._tratar_api(self._post_api)
-                else:
-                    self._responder(404, {"erro": "Rota não encontrada."})
+    def end_headers(self):
+        """Faz o navegador sempre conferir se o arquivo mudou (sem cache velho)."""
+        self.send_header("Cache-Control", "no-cache")
+        super().end_headers()
 
-            # --- rotas da API ---
+    def _ler_corpo(self) -> dict:
+        """Lê o corpo da requisição e converte o JSON em dicionário."""
+        tamanho = int(self.headers.get("Content-Length") or 0)
+        return json.loads(self.rfile.read(tamanho) or b"{}")
 
-            def _get_api(self):
-                if self._rota() == "/api/livros":
-                    return 200, livro_service.listar()
-                return 404, {"erro": "Rota não encontrada."}
+    def _responder(self, status: int, dados) -> None:
+        """Envia o status, os headers e os dados em JSON."""
+        corpo = json.dumps(dados, ensure_ascii=False).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(corpo)))
+        self.end_headers()
+        self.wfile.write(corpo)
 
-            def _post_api(self):
-                if self._rota() == "/api/livros":
-                    return 201, livro_service.cadastrar(self._ler_json())
-                return 404, {"erro": "Rota não encontrada."}
+    def _extrair_id(self, caminho):
+        """Pega o {id} de uma URL no formato /api/livros/{id}."""
+        raise NotImplementedError
 
-            # --- apoio ---
-
-            def _rota(self):
-                """Caminho da requisição sem a query string e sem barra final."""
-                caminho = self.path.split("?", 1)[0]
-                return caminho.rstrip("/") or "/"
-
-            def _tratar_api(self, acao):
-                """Executa a rota e traduz qualquer erro em uma resposta JSON."""
-                try:
-                    status, corpo = acao()
-                except ErroValidacao as erro:
-                    status, corpo = 400, {"erro": str(erro)}
-                except ErroBanco as erro:
-                    status, corpo = 503, {"erro": str(erro)}
-                except json.JSONDecodeError:
-                    status, corpo = 400, {"erro": "O corpo enviado não é um JSON válido."}
-                except Exception as erro:  # falha inesperada
-                    status, corpo = 500, {"erro": f"Erro interno do servidor: {erro}"}
-                self._responder(status, corpo)
-
-            def _ler_json(self):
-                """Lê e converte o corpo JSON enviado pelo front-end."""
-                tamanho = int(self.headers.get("Content-Length") or 0)
-                if tamanho <= 0:
-                    return {}
-                if tamanho > LIMITE_CORPO:
-                    raise ErroValidacao("Corpo da requisição grande demais.")
-                corpo = self.rfile.read(tamanho).decode("utf-8")
-                dados = json.loads(corpo)
-                if not isinstance(dados, dict):
-                    raise ErroValidacao("O corpo enviado deve ser um objeto JSON.")
-                return dados
-
-            def _responder(self, status, corpo):
-                """Envia a resposta em JSON."""
-                conteudo = json.dumps(corpo, ensure_ascii=False).encode("utf-8")
-                self.send_response(status)
-                self.send_header("Content-Type", "application/json; charset=utf-8")
-                self.send_header("Content-Length", str(len(conteudo)))
-                self.end_headers()
-                self.wfile.write(conteudo)
-
-        return Manipulador
+    def _servir_estatico(self) -> None:
+        """Entrega os arquivos HTML, CSS e JS da pasta frontend/."""
+        super().do_GET()

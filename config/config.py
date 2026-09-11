@@ -14,3 +14,8 @@ DB_NAME = "biblioteca"
 # --- Servidor HTTP local ---
 SERVIDOR_HOST = "127.0.0.1"
 SERVIDOR_PORTA = 8000
+
+# --- Banco em memória (temporário) ---
+# True: os livros ficam na memória do servidor e somem ao reiniciar.
+# Troque para False quando o MySQL estiver instalado e o ddl.sql tiver rodado.
+USAR_BANCO_MEMORIA = True

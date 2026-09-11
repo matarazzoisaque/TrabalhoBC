@@ -1,7 +1,5 @@
-# Dependências do projeto.
+# Dependências do projeto (Python 3.10 ou superior).
 #
-# Python 3.10 ou superior.
-#
-# O único pacote externo é o driver oficial de MySQL para Python. Todo o
-# restante (servidor HTTP, JSON, testes) usa apenas a biblioteca padrão.
-mysql-connector-python>=9.0
+# Instale com:  pip install -r requirements.txt
+mysql-connector-python>=9.0   # driver do MySQL
+pydantic>=2.0                 # validação dos dados do livro
