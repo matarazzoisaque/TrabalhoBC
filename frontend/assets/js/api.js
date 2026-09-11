@@ -6,40 +6,33 @@
 class Api {
     constructor(base = '/api') {
         this.base = base;
+        this.livrosMock = [
+            { id_livro: 1, titulo: 'O Pequeno Príncipe', autor: 'Antoine de Saint-Exupéry', ano_publicacao: 1943 },
+            { id_livro: 2, titulo: 'Dom Casmurro', autor: 'Machado de Assis', ano_publicacao: 1899 },
+            { id_livro: 3, titulo: 'Clean Code', autor: 'Robert C. Martin', ano_publicacao: 2008 }
+        ];
     }
 
     /* Busca todos os livros cadastrados. */
     async listarLivros() {
-        return this.requisitar('/livros');
+        return this.livrosMock;
     }
 
     /* Envia um novo livro para ser cadastrado. */
     async cadastrarLivro(livro) {
-        return this.requisitar('/livros', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(livro)
-        });
+        const novoLivro = {
+            id_livro: this.proximoCodigo(),
+            titulo: livro.titulo,
+            autor: livro.autor,
+            ano_publicacao: livro.ano_publicacao
+        };
+
+        this.livrosMock.push(novoLivro);
+        return novoLivro;
     }
 
-    /* Faz a requisição e transforma erro do servidor em exceção. */
-    async requisitar(caminho, opcoes = {}) {
-        let resposta;
-        try {
-            resposta = await fetch(this.base + caminho, opcoes);
-        } catch (erro) {
-            throw new Error('Não foi possível falar com o servidor. Ele está rodando?');
-        }
-
-        const corpo = await resposta.json().catch(() => null);
-
-        if (!resposta.ok) {
-            const mensagem = corpo && corpo.erro
-                ? corpo.erro
-                : `Erro ${resposta.status} ao acessar o servidor.`;
-            throw new Error(mensagem);
-        }
-
-        return corpo;
+    proximoCodigo() {
+        const maior = this.livrosMock.reduce((maiorId, livro) => Math.max(maiorId, Number(livro.id_livro) || 0), 0);
+        return maior + 1;
     }
 }
