@@ -54,31 +54,16 @@
                     </label>
 
                     <label class="filter-label">
-                        <span>Páginas</span>
-                        <select id="filterPaginas">
-                            <option value="">Todas</option>
-                            <option value="0-100">0–100</option>
-                            <option value="100-200">100–200</option>
-                            <option value="200-300">200–300</option>
-                            <option value="300-400">300–400</option>
-                            <option value="400-500">400–500</option>
-                            <option value="500+">500+</option>
-                        </select>
-                    </label>
-
-                    <label class="filter-label">
                         <span>Ordenar</span>
                         <select id="sortSelect">
                             <option value="titulo-asc">Nome A–Z</option>
                             <option value="titulo-desc">Nome Z–A</option>
                             <option value="autor-asc">Autor A–Z</option>
                             <option value="autor-desc">Autor Z–A</option>
-                            <option value="paginas-asc">Páginas menor → maior</option>
-                            <option value="paginas-desc">Páginas maior → menor</option>
                             <option value="data-desc">Data de cadastro novo → antigo</option>
                             <option value="data-asc">Data de cadastro antigo → novo</option>
-                            <option value="lancamento-desc">Data de lançamento novo → antigo</option>
-                            <option value="lancamento-asc">Data de lançamento antigo → novo</option>
+                            <option value="lancamento-desc">Ano de lançamento novo → antigo</option>
+                            <option value="lancamento-asc">Ano de lançamento antigo → novo</option>
                         </select>
                     </label>
                 </div>
@@ -94,51 +79,94 @@
     </div>
 
     <div class="modal-backdrop" id="modalBackdrop">
-        <section class="modal-card" role="dialog" aria-modal="true">
+        <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
             <button class="modal-close" id="closeModal" aria-label="Fechar">×</button>
             <div class="modal-head">
                 <span class="chapter-label">Book Book</span>
                 <h2 id="modalTitle">Cadastrar livro</h2>
+                <p class="modal-subtitle">Preencha os dados abaixo para adicionar o livro ao acervo.</p>
             </div>
 
-            <form id="formulario-livro" class="formulario">
-                <div class="campo">
-                    <label for="titulo">Título</label>
-                    <input type="text" id="titulo" name="titulo" maxlength="200" required>
-                </div>
+            <form id="formulario-livro" class="formulario" novalidate>
+                <p id="mensagem-form" class="mensagem" role="alert"></p>
 
-                <div class="campo">
-                    <label for="autor">Autor</label>
-                    <input type="text" id="autor" name="autor" maxlength="150" required>
-                </div>
-
-                <div class="campo">
-                    <label for="genero">Gênero</label>
-                    <input type="text" id="genero" name="genero" maxlength="80" required>
-                </div>
-
-                <div class="campo two-columns">
-                    <div>
-                        <label for="paginas">Quantidade de páginas</label>
-                        <input type="number" id="paginas" name="paginas" min="1" max="2000" required>
+                <div class="two-columns">
+                    <div class="campo">
+                        <label for="titulo">Título <span class="obrigatorio" aria-hidden="true">*</span></label>
+                        <input type="text" id="titulo" name="titulo" maxlength="200" required
+                               placeholder="Título do livro">
                     </div>
 
-                    <div>
+                    <div class="campo">
+                        <label for="autor">Autor <span class="obrigatorio" aria-hidden="true">*</span></label>
+                        <input type="text" id="autor" name="autor" maxlength="150" required
+                               placeholder="Nome do autor">
+                    </div>
+                </div>
+
+                <div class="three-columns">
+                    <div class="campo">
+                        <label for="genero">Gênero <span class="obrigatorio" aria-hidden="true">*</span></label>
+                        <input type="text" id="genero" name="genero" maxlength="80" required
+                               placeholder="Ex.: Romance">
+                    </div>
+
+                    <div class="campo">
                         <label for="data_cadastro">Data de cadastro</label>
-                        <input type="date" id="data_cadastro" name="data_cadastro" required>
+                        <input type="date" id="data_cadastro" name="data_cadastro" readonly tabindex="-1"
+                               title="Definida automaticamente pelo sistema">
+                    </div>
+
+                    <div class="campo">
+                        <label for="ano_lancamento">Ano de lançamento <span class="obrigatorio" aria-hidden="true">*</span></label>
+                        <input type="number" id="ano_lancamento" name="ano_lancamento" min="1450" required
+                               placeholder="Ex.: 1899">
                     </div>
                 </div>
 
                 <div class="campo">
-                    <label for="data_lancamento">Data de lançamento</label>
-                    <input type="date" id="data_lancamento" name="data_lancamento" required>
+                    <label for="resumo">Resumo <span class="obrigatorio" aria-hidden="true">*</span></label>
+                    <textarea id="resumo" name="resumo" rows="6" maxlength="1000" required
+                              aria-describedby="contador-resumo"
+                              placeholder="Conte em poucas linhas do que o livro trata"></textarea>
+                    <span class="campo-contador" id="contador-resumo">0/1000 caracteres</span>
                 </div>
 
                 <div class="form-actions">
-                    <button type="button" class="button button-muted" id="cancelForm">Cancelar</button>
-                    <button type="submit" class="button button-primary">Salvar livro</button>
+                    <button type="submit" class="button button-primary">Criar</button>
                 </div>
             </form>
+        </section>
+    </div>
+
+    <div class="modal-backdrop" id="viewBackdrop">
+        <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="viewTitulo">
+            <button class="modal-close" id="closeView" aria-label="Fechar">×</button>
+            <div class="modal-head">
+                <span class="chapter-label" data-campo="genero"></span>
+                <h2 id="viewTitulo" data-campo="titulo"></h2>
+                <p class="modal-subtitle" data-campo="autor"></p>
+            </div>
+
+            <dl class="view-grid">
+                <div>
+                    <dt>Ano de lançamento</dt>
+                    <dd data-campo="ano_lancamento"></dd>
+                </div>
+                <div>
+                    <dt>Data de cadastro</dt>
+                    <dd data-campo="data_cadastro"></dd>
+                </div>
+                <div>
+                    <dt>Código</dt>
+                    <dd data-campo="id_livro"></dd>
+                </div>
+            </dl>
+
+            <div class="view-resumo">
+                <h3>Resumo</h3>
+                <p data-campo="resumo"></p>
+            </div>
         </section>
     </div>
 

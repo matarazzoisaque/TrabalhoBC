@@ -6,62 +6,50 @@
 class Api {
     constructor(base = '/api') {
         this.base = base;
-        this.livrosMock = [
-            { id_livro: 1, titulo: 'O Pequeno Príncipe', autor: 'Antoine de Saint-Exupéry', genero: 'Fábula', paginas: 96, data_lancamento: '2024-01-10', data_cadastro: '2024-01-10' },
-            { id_livro: 2, titulo: 'Dom Casmurro', autor: 'Machado de Assis', genero: 'Romance', paginas: 256, data_lancamento: '2023-10-02', data_cadastro: '2023-10-02' },
-            { id_livro: 3, titulo: 'Clean Code', autor: 'Robert C. Martin', genero: 'Técnico', paginas: 464, data_lancamento: '2022-08-20', data_cadastro: '2022-08-20' },
-            { id_livro: 4, titulo: 'A Revolução dos Bichos', autor: 'George Orwell', genero: 'Ficção', paginas: 164, data_lancamento: '2023-03-14', data_cadastro: '2023-03-14' },
-            { id_livro: 5, titulo: 'Os Sertões', autor: 'Euclides da Cunha', genero: 'História', paginas: 438, data_lancamento: '2021-10-30', data_cadastro: '2021-10-30' }
-        ];
     }
 
-    async listarLivros() {
-        return this.livrosMock;
+    /* Busca os livros; filtros e ordenação são aplicados pelo servidor. */
+    async listarLivros(filtros = {}) {
+        const parametros = new URLSearchParams();
+        for (const [chave, valor] of Object.entries(filtros)) {
+            if (valor) parametros.append(chave, valor);
+        }
+        const consulta = parametros.toString();
+        return this.requisitar(consulta ? `/livros?${consulta}` : '/livros');
     }
 
+    /* Autores e gêneros cadastrados, para preencher os filtros. */
+    async opcoesDeFiltro() {
+        return this.requisitar('/livros/filtros');
+    }
+
+    /* Envia um novo livro para ser cadastrado. */
     async cadastrarLivro(livro) {
-        const novoLivro = {
-            id_livro: this.proximoCodigo(),
-            titulo: livro.titulo,
-            autor: livro.autor,
-            genero: livro.genero,
-            paginas: Number(livro.paginas),
-            data_lancamento: livro.data_lancamento || livro.data_cadastro || new Date().toISOString().slice(0, 10),
-            data_cadastro: livro.data_cadastro || new Date().toISOString().slice(0, 10)
-        };
-
-        this.livrosMock.push(novoLivro);
-        return novoLivro;
-    }
-
-    async atualizarLivro(id_livro, livro) {
-        const alvo = this.livrosMock.find((livroItem) => Number(livroItem.id_livro) === Number(id_livro));
-        if (!alvo) return null;
-
-        Object.assign(alvo, {
-            titulo: livro.titulo,
-            autor: livro.autor,
-            genero: livro.genero,
-            paginas: Number(livro.paginas),
-            data_lancamento: livro.data_lancamento || livro.data_cadastro || alvo.data_lancamento,
-            data_cadastro: livro.data_cadastro || alvo.data_cadastro
+        return this.requisitar('/livros', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(livro)
         });
-
-        return alvo;
     }
 
-    async excluirLivro(id_livro) {
-        const indice = this.livrosMock.findIndex((livro) => Number(livro.id_livro) === Number(id_livro));
-        if (indice >= 0) {
-            const [removido] = this.livrosMock.splice(indice, 1);
-            return removido;
+    /* Faz a requisição e transforma erro do servidor em exceção. */
+    async requisitar(caminho, opcoes = {}) {
+        let resposta;
+        try {
+            resposta = await fetch(this.base + caminho, opcoes);
+        } catch (erro) {
+            throw new Error(
+                'Não foi possível falar com o servidor. Rode "python -m app.main" '
+                + 'e abra o sistema por http://127.0.0.1:8000 (não pelo arquivo).'
+            );
         }
 
-        return null;
-    }
+        const corpo = await resposta.json().catch(() => null);
 
-    proximoCodigo() {
-        const maior = this.livrosMock.reduce((maiorId, livro) => Math.max(maiorId, Number(livro.id_livro) || 0), 0);
-        return maior + 1;
+        if (!resposta.ok) {
+            throw new Error(corpo && corpo.erro ? corpo.erro : `Erro ${resposta.status} ao acessar o servidor.`);
+        }
+
+        return corpo;
     }
 }
