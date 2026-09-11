@@ -6,32 +6,93 @@
     <title>Biblioteca — Acervo</title>
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
-<body>
-    <header class="cabecalho">
-        <h1>Biblioteca</h1>
-        <nav class="menu">
-            <a href="index.html" class="ativo">Acervo</a>
-            <a href="cadastro.html">Cadastrar livro</a>
-        </nav>
-    </header>
+<body data-theme="light">
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <span class="sidebar-logo" aria-hidden="true">B</span>
+                <span class="sidebar-title">Biblioteca</span>
+            </div>
 
-    <main class="conteudo">
-        <h2>Livros cadastrados</h2>
+            <nav class="sidebar-nav" aria-label="Navegação principal">
+                <a class="nav-link active" href="index.html">
+                    <span class="nav-icon" aria-hidden="true">▦</span>
+                    <span class="nav-text">Acervo</span>
+                </a>
+                <a class="nav-link" href="cadastro.html">
+                    <span class="nav-icon" aria-hidden="true">＋</span>
+                    <span class="nav-text">Cadastrar livro</span>
+                </a>
+            </nav>
 
-        <p id="mensagem" class="mensagem" role="status"></p>
+            <div class="sidebar-bottom">
+                <button class="theme-switch" id="themeToggle" aria-label="Alternar tema">
+                    <span class="theme-icon" aria-hidden="true">☀</span>
+                    <span class="theme-label">Tema claro</span>
+                </button>
+            </div>
+        </aside>
 
-        <table class="tabela" id="tabela-livros" hidden>
-            <thead>
-                <tr>
-                    <th>Código</th>
-                    <th>Título</th>
-                    <th>Autor</th>
-                    <th>Ano</th>
-                </tr>
-            </thead>
-            <tbody id="corpo-tabela"></tbody>
-        </table>
-    </main>
+        <main class="main-content">
+            <section class="topbar">
+                <div class="topbar-copy">
+                    <span class="section-kicker">Dashboard</span>
+                    <h1>Acervo bibliográfico</h1>
+                </div>
+
+                <div class="topbar-actions">
+                    <a class="topbar-button" href="cadastro.html">
+                        <span aria-hidden="true">＋</span>
+                        Novo livro
+                    </a>
+                </div>
+            </section>
+
+            <section class="summary-grid" aria-label="Resumo de biblioteca">
+                <article class="summary-card">
+                    <span class="summary-card-label">Livros</span>
+                    <span class="summary-card-value" id="summaryCount">0</span>
+                    <span class="summary-card-detail">Cadastrados</span>
+                </article>
+                <article class="summary-card">
+                    <span class="summary-card-label">Autores</span>
+                    <span class="summary-card-value" id="summaryAuthors">0</span>
+                    <span class="summary-card-detail">Ativos</span>
+                </article>
+                <article class="summary-card">
+                    <span class="summary-card-label">Coleção</span>
+                    <span class="summary-card-value">2026</span>
+                    <span class="summary-card-detail">Ano atual</span>
+                </article>
+            </section>
+
+            <section class="content-panel">
+                <div class="panel-head">
+                    <div>
+                        <span class="panel-kicker">Acervo</span>
+                        <h2>Livros cadastrados</h2>
+                    </div>
+                    <a class="button-soft" href="cadastro.html">Cadastrar</a>
+                </div>
+
+                <p id="mensagem" class="mensagem" role="status"></p>
+
+                <div class="table-wrap">
+                    <table class="table" id="tabela-livros" hidden>
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Título</th>
+                                <th>Autor</th>
+                                <th>Ano</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpo-tabela"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
 
     <script src="assets/js/api.js" defer></script>
     <script src="assets/js/livros.js" defer></script>

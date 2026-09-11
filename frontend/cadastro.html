@@ -6,40 +6,84 @@
     <title>Biblioteca — Cadastrar livro</title>
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
-<body>
-    <header class="cabecalho">
-        <h1>Biblioteca</h1>
-        <nav class="menu">
-            <a href="index.html">Acervo</a>
-            <a href="cadastro.html" class="ativo">Cadastrar livro</a>
-        </nav>
-    </header>
-
-    <main class="conteudo">
-        <h2>Cadastrar livro</h2>
-
-        <p id="mensagem" class="mensagem" role="status"></p>
-
-        <form id="formulario-livro" class="formulario" novalidate>
-            <div class="campo">
-                <label for="titulo">Título</label>
-                <input type="text" id="titulo" name="titulo" maxlength="200" required>
+<body data-theme="light">
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <span class="sidebar-logo" aria-hidden="true">B</span>
+                <span class="sidebar-title">Biblioteca</span>
             </div>
 
-            <div class="campo">
-                <label for="autor">Autor</label>
-                <input type="text" id="autor" name="autor" maxlength="150" required>
-            </div>
+            <nav class="sidebar-nav" aria-label="Navegação principal">
+                <a class="nav-link" href="index.html">
+                    <span class="nav-icon" aria-hidden="true">▦</span>
+                    <span class="nav-text">Acervo</span>
+                </a>
+                <a class="nav-link active" href="cadastro.html">
+                    <span class="nav-icon" aria-hidden="true">＋</span>
+                    <span class="nav-text">Cadastrar livro</span>
+                </a>
+            </nav>
 
-            <div class="campo">
-                <label for="ano_publicacao">Ano de publicação</label>
-                <input type="number" id="ano_publicacao" name="ano_publicacao"
-                       min="1450" max="2100" required>
+            <div class="sidebar-bottom">
+                <button class="theme-switch" id="themeToggle" aria-label="Alternar tema">
+                    <span class="theme-icon" aria-hidden="true">☀</span>
+                    <span class="theme-label">Tema claro</span>
+                </button>
             </div>
+        </aside>
 
-            <button type="submit" class="botao">Salvar</button>
-        </form>
-    </main>
+        <main class="main-content">
+            <section class="topbar">
+                <div class="topbar-copy">
+                    <span class="section-kicker">Cadastro</span>
+                    <h1>Novo livro</h1>
+                </div>
+
+                <div class="topbar-actions">
+                    <a class="topbar-button ghost" href="index.html">
+                        <span aria-hidden="true">←</span>
+                        Voltar ao acervo
+                    </a>
+                </div>
+            </section>
+
+            <section class="content-panel form-panel">
+                <div class="panel-head">
+                    <div>
+                        <span class="panel-kicker">Cadastro</span>
+                        <h2>Cadastrar livro</h2>
+                    </div>
+                    <a class="button-soft" href="index.html">Consultar acervo</a>
+                </div>
+
+                <p id="mensagem" class="mensagem" role="status"></p>
+
+                <form id="formulario-livro" class="formulario" novalidate>
+                    <div class="campo">
+                        <label for="titulo">Título</label>
+                        <input type="text" id="titulo" name="titulo" maxlength="200" required placeholder="Digite o título do livro">
+                    </div>
+
+                    <div class="campo">
+                        <label for="autor">Autor</label>
+                        <input type="text" id="autor" name="autor" maxlength="150" required placeholder="Digite o autor">
+                    </div>
+
+                    <div class="campo">
+                        <label for="ano_publicacao">Ano de publicação</label>
+                        <input type="number" id="ano_publicacao" name="ano_publicacao"
+                               min="1450" max="2100" required placeholder="Ex.: 2024">
+                    </div>
+
+                    <div class="botoes-form">
+                        <button type="submit" class="button button-primary">Salvar livro</button>
+                        <button type="reset" class="button button-muted">Limpar</button>
+                    </div>
+                </form>
+            </section>
+        </main>
+    </div>
 
     <script src="assets/js/api.js" defer></script>
     <script src="assets/js/livros.js" defer></script>
