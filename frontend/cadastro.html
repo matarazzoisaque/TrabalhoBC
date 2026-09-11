@@ -3,86 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Biblioteca — Cadastrar livro</title>
+    <title>Book Book — Catálogo</title>
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body data-theme="light">
-    <div class="app-shell">
-        <aside class="sidebar">
-            <div class="sidebar-brand">
-                <span class="sidebar-logo" aria-hidden="true">B</span>
-                <span class="sidebar-title">Biblioteca</span>
-            </div>
+    <div class="app">
+        <header class="site-header">
+            <a class="logo" href="index.html" aria-label="Book Book">
+                <span class="logo-mark">Book Book</span>
+            </a>
 
-            <nav class="sidebar-nav" aria-label="Navegação principal">
-                <a class="nav-link" href="index.html">
-                    <span class="nav-icon" aria-hidden="true">▦</span>
-                    <span class="nav-text">Acervo</span>
-                </a>
-                <a class="nav-link active" href="cadastro.html">
-                    <span class="nav-icon" aria-hidden="true">＋</span>
-                    <span class="nav-text">Cadastrar livro</span>
-                </a>
-            </nav>
+            <button class="theme-toggle" id="themeToggle" aria-label="Alternar tema">
+                <span class="theme-icon" aria-hidden="true">☀</span>
+            </button>
+        </header>
 
-            <div class="sidebar-bottom">
-                <button class="theme-switch" id="themeToggle" aria-label="Alternar tema">
-                    <span class="theme-icon" aria-hidden="true">☀</span>
-                    <span class="theme-label">Tema claro</span>
-                </button>
-            </div>
-        </aside>
-
-        <main class="main-content">
-            <section class="topbar">
-                <div class="topbar-copy">
-                    <span class="section-kicker">Cadastro</span>
-                    <h1>Novo livro</h1>
+        <main class="catalog-wrap">
+            <section class="catalog-head">
+                <div class="catalog-title-block">
+                    <span class="chapter-label">Acervo digital</span>
+                    <h1>Biblioteca</h1>
                 </div>
 
-                <div class="topbar-actions">
-                    <a class="topbar-button ghost" href="index.html">
-                        <span aria-hidden="true">←</span>
-                        Voltar ao acervo
-                    </a>
+                <div class="catalog-actions">
+                    <button class="primary-button open-form" id="openForm">
+                        <span aria-hidden="true">+</span> Cadastrar novo livro
+                    </button>
                 </div>
             </section>
 
-            <section class="content-panel form-panel">
-                <div class="panel-head">
-                    <div>
-                        <span class="panel-kicker">Cadastro</span>
-                        <h2>Cadastrar livro</h2>
-                    </div>
-                    <a class="button-soft" href="index.html">Consultar acervo</a>
+            <section class="catalog-toolbar">
+                <div class="search-box">
+                    <span class="search-icon" aria-hidden="true">⌕</span>
+                    <input type="search" id="searchInput" placeholder="Buscar por título, autor ou gênero">
                 </div>
 
-                <p id="mensagem" class="mensagem" role="status"></p>
+                <div class="filter-row">
+                    <label class="filter-label">
+                        <span>Autor</span>
+                        <select id="filterAutor">
+                            <option value="">Todos</option>
+                        </select>
+                    </label>
 
-                <form id="formulario-livro" class="formulario" novalidate>
-                    <div class="campo">
-                        <label for="titulo">Título</label>
-                        <input type="text" id="titulo" name="titulo" maxlength="200" required placeholder="Digite o título do livro">
-                    </div>
+                    <label class="filter-label">
+                        <span>Gênero</span>
+                        <select id="filterGenero">
+                            <option value="">Todos</option>
+                        </select>
+                    </label>
 
-                    <div class="campo">
-                        <label for="autor">Autor</label>
-                        <input type="text" id="autor" name="autor" maxlength="150" required placeholder="Digite o autor">
-                    </div>
+                    <label class="filter-label">
+                        <span>Páginas</span>
+                        <select id="filterPaginas">
+                            <option value="">Todas</option>
+                            <option value="0-100">0–100</option>
+                            <option value="100-200">100–200</option>
+                            <option value="200-300">200–300</option>
+                            <option value="300-400">300–400</option>
+                            <option value="400-500">400–500</option>
+                            <option value="500+">500+</option>
+                        </select>
+                    </label>
 
-                    <div class="campo">
-                        <label for="ano_publicacao">Ano de publicação</label>
-                        <input type="number" id="ano_publicacao" name="ano_publicacao"
-                               min="1450" max="2100" required placeholder="Ex.: 2024">
-                    </div>
-
-                    <div class="botoes-form">
-                        <button type="submit" class="button button-primary">Salvar livro</button>
-                        <button type="reset" class="button button-muted">Limpar</button>
-                    </div>
-                </form>
+                    <label class="filter-label">
+                        <span>Ordenar</span>
+                        <select id="sortSelect">
+                            <option value="titulo-asc">Nome A–Z</option>
+                            <option value="titulo-desc">Nome Z–A</option>
+                            <option value="autor-asc">Autor A–Z</option>
+                            <option value="autor-desc">Autor Z–A</option>
+                            <option value="paginas-asc">Páginas menor → maior</option>
+                            <option value="paginas-desc">Páginas maior → menor</option>
+                            <option value="data-desc">Data de cadastro novo → antigo</option>
+                            <option value="data-asc">Data de cadastro antigo → novo</option>
+                            <option value="lancamento-desc">Data de lançamento novo → antigo</option>
+                            <option value="lancamento-asc">Data de lançamento antigo → novo</option>
+                        </select>
+                    </label>
+                </div>
             </section>
+
+            <section class="catalog-list-wrapper">
+                <div class="catalog-list" id="catalogList">
+                </div>
+            </section>
+
+            <p id="mensagem" class="mensagem" role="status"></p>
         </main>
+    </div>
+
+    <div class="modal-backdrop" id="modalBackdrop">
+        <section class="modal-card" role="dialog" aria-modal="true">
+            <button class="modal-close" id="closeModal" aria-label="Fechar">×</button>
+            <div class="modal-head">
+                <span class="chapter-label">Book Book</span>
+                <h2 id="modalTitle">Cadastrar livro</h2>
+            </div>
+
+            <form id="formulario-livro" class="formulario">
+                <div class="campo">
+                    <label for="titulo">Título</label>
+                    <input type="text" id="titulo" name="titulo" maxlength="200" required>
+                </div>
+
+                <div class="campo">
+                    <label for="autor">Autor</label>
+                    <input type="text" id="autor" name="autor" maxlength="150" required>
+                </div>
+
+                <div class="campo">
+                    <label for="genero">Gênero</label>
+                    <input type="text" id="genero" name="genero" maxlength="80" required>
+                </div>
+
+                <div class="campo two-columns">
+                    <div>
+                        <label for="paginas">Quantidade de páginas</label>
+                        <input type="number" id="paginas" name="paginas" min="1" max="2000" required>
+                    </div>
+
+                    <div>
+                        <label for="data_cadastro">Data de cadastro</label>
+                        <input type="date" id="data_cadastro" name="data_cadastro" required>
+                    </div>
+                </div>
+
+                <div class="campo">
+                    <label for="data_lancamento">Data de lançamento</label>
+                    <input type="date" id="data_lancamento" name="data_lancamento" required>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="button button-muted" id="cancelForm">Cancelar</button>
+                    <button type="submit" class="button button-primary">Salvar livro</button>
+                </div>
+            </form>
+        </section>
     </div>
 
     <script src="assets/js/api.js" defer></script>
