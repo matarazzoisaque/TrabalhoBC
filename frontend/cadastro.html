@@ -4,14 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Book Book — Catálogo</title>
+    <script>
+        (function() {
+            const saved = localStorage.getItem('biblioteca-theme') || 'light';
+            const theme = saved === 'dark' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
-<body data-theme="light">
+<body>
     <div class="app">
         <header class="site-header">
             <a class="logo" href="index.html" aria-label="Book Book">
                 <span class="logo-mark">Book Book</span>
             </a>
+
+            <nav class="site-nav" aria-label="Navegação principal">
+                <a class="nav-link" href="index.html">Início</a>
+                <a class="nav-link active" href="cadastro.html">Livros</a>
+                <a class="nav-link" href="leitores.html">Leitores</a>
+                <a class="nav-link" href="exemplares.html">Exemplares</a>
+                <a class="nav-link" href="emprestimos.html">Empréstimos</a>
+            </nav>
 
             <button class="theme-toggle" id="themeToggle" aria-label="Alternar tema">
                 <span class="theme-icon" aria-hidden="true">☀</span>
@@ -71,8 +86,6 @@
                         <select id="sortSelect">
                             <option value="titulo-asc">Nome A–Z</option>
                             <option value="titulo-desc">Nome Z–A</option>
-                            <option value="autor-asc">Autor A–Z</option>
-                            <option value="autor-desc">Autor Z–A</option>
                             <option value="paginas-asc">Páginas menor → maior</option>
                             <option value="paginas-desc">Páginas maior → menor</option>
                             <option value="data-desc">Data de cadastro novo → antigo</option>
@@ -102,43 +115,81 @@
             </div>
 
             <form id="formulario-livro" class="formulario">
-                <div class="campo">
-                    <label for="titulo">Título</label>
-                    <input type="text" id="titulo" name="titulo" maxlength="200" required>
-                </div>
+                <p id="mensagem-formulario" class="mensagem mensagem-formulario" role="status"></p>
 
-                <div class="campo">
-                    <label for="autor">Autor</label>
-                    <input type="text" id="autor" name="autor" maxlength="150" required>
-                </div>
+                <div class="form-grid">
+                    <div class="campo">
+                        <label for="titulo">Título</label>
+                        <input type="text" id="titulo" name="titulo" maxlength="200" required>
+                    </div>
 
-                <div class="campo">
-                    <label for="genero">Gênero</label>
-                    <input type="text" id="genero" name="genero" maxlength="80" required>
-                </div>
+                    <div class="campo">
+                        <label for="autor">Autor</label>
+                        <input type="text" id="autor" name="autor" maxlength="150" required>
+                    </div>
 
-                <div class="campo two-columns">
-                    <div>
+                    <div class="campo">
+                        <label for="genero">Gênero</label>
+                        <input type="text" id="genero" name="genero" maxlength="80" required>
+                    </div>
+
+                    <div class="campo">
                         <label for="paginas">Quantidade de páginas</label>
                         <input type="number" id="paginas" name="paginas" min="1" max="2000" required>
                     </div>
 
-                    <div>
+                    <div class="campo">
+                        <label for="data_lancamento">Data de lançamento</label>
+                        <input type="date" id="data_lancamento" name="data_lancamento" required>
+                    </div>
+
+                    <div class="campo">
                         <label for="data_cadastro">Data de cadastro</label>
-                        <input type="date" id="data_cadastro" name="data_cadastro" required>
+                        <input type="date" id="data_cadastro" name="data_cadastro" readonly>
                     </div>
                 </div>
 
-                <div class="campo">
-                    <label for="data_lancamento">Data de lançamento</label>
-                    <input type="date" id="data_lancamento" name="data_lancamento" required>
-                </div>
-
                 <div class="form-actions">
-                    <button type="button" class="button button-muted" id="cancelForm">Cancelar</button>
-                    <button type="submit" class="button button-primary">Salvar livro</button>
+                    <button type="button" class="button button-muted" id="cancelForm">Voltar</button>
+                    <button type="submit" class="button button-primary">Cadastrar livro</button>
                 </div>
             </form>
+        </section>
+    </div>
+
+    <div class="modal-backdrop" id="viewBackdrop">
+        <section class="modal-card modal-view-card" role="dialog" aria-modal="true">
+            <button class="modal-close" id="closeView" aria-label="Fechar">×</button>
+            <div class="modal-head">
+                <span class="chapter-label">Book Book</span>
+                <h2 id="viewTitle">Livro</h2>
+                <p class="modal-subtitle" id="viewSubtitle">Autor</p>
+            </div>
+
+            <div class="view-content">
+                <dl class="view-grid">
+                    <div class="view-row">
+                        <dt class="view-label">Ano de lançamento</dt>
+                        <dd class="view-value" id="viewAnoLancamento"></dd>
+                    </div>
+                    <div class="view-row">
+                        <dt class="view-label">Data de cadastro</dt>
+                        <dd class="view-value" id="viewDataCadastro"></dd>
+                    </div>
+                    <div class="view-row">
+                        <dt class="view-label">Código</dt>
+                        <dd class="view-value" id="viewCodigo"></dd>
+                    </div>
+                    <div class="view-row">
+                        <dt class="view-label">Exemplares disponíveis</dt>
+                        <dd class="view-value" id="viewExemplaresDisponiveis"></dd>
+                    </div>
+                </dl>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="button button-muted" id="closeViewBook">Voltar</button>
+            </div>
         </section>
     </div>
 
