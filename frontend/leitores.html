@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Book — Leitores</title>
+    <script>
+        (function() {
+            const saved = localStorage.getItem('biblioteca-theme') || 'light';
+            const theme = saved === 'dark' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+    <div class="app">
+        <header class="site-header">
+            <a class="logo" href="index.html" aria-label="Book Book">
+                <span class="logo-mark">Book Book</span>
+            </a>
+
+            <nav class="site-nav" aria-label="Navegação principal">
+                <a class="nav-link" href="index.html">Início</a>
+                <a class="nav-link" href="cadastro.html">Livros</a>
+                <a class="nav-link active" href="leitores.html">Leitores</a>
+                <a class="nav-link" href="exemplares.html">Exemplares</a>
+                <a class="nav-link" href="emprestimos.html">Empréstimos</a>
+            </nav>
+
+            <button class="theme-toggle" id="themeToggle" aria-label="Alternar tema">
+                <span class="theme-icon" aria-hidden="true">☀</span>
+            </button>
+        </header>
+
+        <main class="catalog-wrap">
+            <section class="catalog-head">
+                <div class="catalog-title-block">
+                    <span class="chapter-label">Acervo digital</span>
+                    <h1>Leitores</h1>
+                </div>
+
+                <div class="catalog-actions">
+                    <button class="primary-button open-form" id="openForm">
+                        <span aria-hidden="true">+</span> Cadastrar novo leitor
+                    </button>
+                </div>
+            </section>
+
+            <section class="catalog-toolbar">
+                <div class="search-box">
+                    <span class="search-icon" aria-hidden="true">⌕</span>
+                    <input type="search" id="searchInput" placeholder="Buscar por nome ou e-mail">
+                </div>
+            </section>
+
+            <section class="catalog-list-wrapper">
+                <div class="catalog-list" id="catalogList">
+                </div>
+            </section>
+
+            <p id="mensagem" class="mensagem" role="status"></p>
+        </main>
+    </div>
+
+    <div class="modal-backdrop" id="modalCadastro">
+        <section class="modal-card" role="dialog" aria-modal="true">
+            <button class="modal-close" id="closeCadastro" aria-label="Fechar">×</button>
+            <div class="modal-head">
+                <span class="chapter-label">Book Book</span>
+                <h2 id="modalTitle">Cadastrar leitor</h2>
+            </div>
+
+            <form id="formulario-leitor" class="formulario">
+                <p id="mensagem-formulario" class="mensagem mensagem-formulario" role="status"></p>
+
+                <div class="form-grid">
+                    <div class="campo">
+                        <label for="nome">Nome</label>
+                        <input type="text" id="nome" name="nome" maxlength="150" required>
+                    </div>
+
+                    <div class="campo">
+                        <label for="email">E-mail</label>
+                        <input type="email" id="email" name="email" maxlength="150" required>
+                    </div>
+
+                    <div class="campo">
+                        <label for="telefone">Telefone</label>
+                        <input type="tel" id="telefone" name="telefone" maxlength="30" required>
+                    </div>
+
+                    <div class="campo">
+                        <label for="data_cadastro">Data de cadastro</label>
+                        <input type="date" id="data_cadastro" name="data_cadastro" readonly>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="button button-muted" id="cancelForm">Voltar</button>
+                    <button type="submit" class="button button-primary">Cadastrar leitor</button>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <div class="modal-backdrop" id="modalVisualizacao">
+        <section class="modal-card modal-view-card" role="dialog" aria-modal="true">
+            <button class="modal-close" id="closeVisualizacao" aria-label="Fechar">×</button>
+            <div class="modal-head">
+                <span class="chapter-label">Book Book</span>
+                <h2 id="visualizarTitle">Detalhes do leitor</h2>
+                <p class="modal-subtitle" id="visualizarSubtitle">E-mail</p>
+            </div>
+
+            <div class="view-content">
+                <dl class="view-grid">
+                    <div class="view-row">
+                        <dt class="view-label">Nome</dt>
+                        <dd class="view-value" id="viewLeitorNome"></dd>
+                    </div>
+                    <div class="view-row">
+                        <dt class="view-label">E-mail</dt>
+                        <dd class="view-value" id="viewLeitorEmail"></dd>
+                    </div>
+                    <div class="view-row">
+                        <dt class="view-label">Telefone</dt>
+                        <dd class="view-value" id="viewLeitorTelefone"></dd>
+                    </div>
+                    <div class="view-row">
+                        <dt class="view-label">Data de cadastro</dt>
+                        <dd class="view-value" id="viewLeitorDataCadastro"></dd>
+                    </div>
+                </dl>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="button button-muted" id="fecharVisualizacao">Voltar</button>
+            </div>
+        </section>
+    </div>
+
+    <div class="modal-backdrop" id="modalConfirmacao">
+        <section class="modal-card modal-confirm" role="dialog" aria-modal="true">
+            <button class="modal-close" id="closeConfirmacao" aria-label="Fechar">×</button>
+            <div class="modal-head">
+                <span class="chapter-label">Book Book</span>
+                <h2 id="confirmTitle">Confirmar exclusão</h2>
+            </div>
+
+            <div class="confirm-content">
+                <p id="confirmText">Deseja excluir este leitor?</p>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="button button-muted" id="cancelDelete">Cancelar</button>
+                <button type="button" class="button button-primary" id="confirmDelete">Excluir leitor</button>
+            </div>
+        </section>
+    </div>
+
+    <script src="assets/js/api.js" defer></script>
+    <script src="assets/js/leitores.js" defer></script>
+</body>
+</html>
