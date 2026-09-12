@@ -8,7 +8,7 @@ class TelaLivros {
     constructor(api) {
         this.api = api;
         this.mensagem = document.getElementById('mensagem');
-        this.mensagemForm = document.getElementById('mensagem-form');
+        this.mensagemFormulario = document.getElementById('mensagem-formulario');
         this.mensagemExclusao = document.getElementById('mensagem-exclusao');
         this.catalogList = document.getElementById('catalogList');
         this.formulario = document.getElementById('formulario-livro');
@@ -33,11 +33,21 @@ class TelaLivros {
         this.campoResumo = document.getElementById('resumo');
         this.contadorResumo = document.getElementById('contador-resumo');
         this.themeToggle = document.getElementById('themeToggle');
-        this.botaoSalvar = null;
+        this.viewTitle = document.getElementById('viewTitle');
+        this.viewSubtitle = document.getElementById('viewSubtitle');
+        this.viewAnoLancamento = document.getElementById('viewAnoLancamento');
+        this.viewDataCadastro = document.getElementById('viewDataCadastro');
+        this.viewCodigo = document.getElementById('viewCodigo');
+        this.viewExemplaresDisponiveis = document.getElementById('viewExemplaresDisponiveis');
+        this.closeViewBook = document.getElementById('closeViewBook');
+        this.livros = [];
         this.livroEditandoId = null;
         this.livroExcluindo = null;
         this.dadosOriginais = null;
         this.esperaBusca = null;
+        this.botaoSalvar = null;
+        this.toastTimer = null;
+        this.toastHideTimer = null;
     }
 
     iniciar() {
@@ -56,17 +66,18 @@ class TelaLivros {
     }
 
     aplicarTemaSalvo() {
-        const saved = localStorage.getItem('biblioteca-theme') || 'light';
-        document.body.dataset.theme = saved;
-        this.atualizarTemaVisual(saved);
+        const saved = document.documentElement.dataset.theme || localStorage.getItem('biblioteca-theme') || 'light';
+        const tema = saved === 'dark' ? 'dark' : 'light';
+        document.documentElement.dataset.theme = tema;
+        this.atualizarTemaVisual(tema);
     }
 
     configurarTema() {
         if (!this.themeToggle) return;
 
         this.themeToggle.addEventListener('click', () => {
-            const proximoTema = document.body.dataset.theme === 'light' ? 'dark' : 'light';
-            document.body.dataset.theme = proximoTema;
+            const proximoTema = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+            document.documentElement.dataset.theme = proximoTema;
             localStorage.setItem('biblioteca-theme', proximoTema);
             this.atualizarTemaVisual(proximoTema);
         });
@@ -84,14 +95,36 @@ class TelaLivros {
     configurarCatalogo() {
         this.openForm.addEventListener('click', () => this.abrirCadastro());
 
-        // Espera o usuário parar de digitar antes de pedir ao servidor.
-        this.searchInput.addEventListener('input', () => {
-            clearTimeout(this.esperaBusca);
-            this.esperaBusca = setTimeout(() => this.carregarLivros(), 300);
-        });
+        if (this.searchInput) {
+            this.searchInput.addEventListener('input', () => this.aplicarFiltros());
+        }
 
-        for (const filtro of [this.filterGenero, this.filterPeriodo, this.sortSelect]) {
-            filtro.addEventListener('change', () => this.carregarLivros());
+        if (this.filterGenero) {
+            this.filterGenero.addEventListener('change', () => this.aplicarFiltros());
+        }
+
+        if (this.filterPeriodo) {
+            this.filterPeriodo.addEventListener('change', () => this.aplicarFiltros());
+        }
+
+        if (this.sortSelect) {
+            this.sortSelect.addEventListener('change', () => this.aplicarFiltros());
+        }
+
+        if (this.closeView) {
+            this.closeView.addEventListener('click', () => this.fecharVisualizacaoLivro());
+        }
+
+        if (this.closeViewBook) {
+            this.closeViewBook.addEventListener('click', () => this.fecharVisualizacaoLivro());
+        }
+
+        if (this.viewBackdrop) {
+            this.viewBackdrop.addEventListener('click', (evento) => {
+                if (evento.target === this.viewBackdrop) {
+                    this.fecharVisualizacaoLivro();
+                }
+            });
         }
     }
 
@@ -178,7 +211,6 @@ class TelaLivros {
         for (const livro of livros) {
             this.catalogList.appendChild(this.criarItem(livro));
         }
-        this.exibirMensagem(`${livros.length} livro(s) encontrado(s).`);
     }
 
     /* Monta um card do catálogo. Usa textContent: o conteúdo vem do usuário. */
@@ -249,11 +281,63 @@ class TelaLivros {
         this.livroEditandoId = null;
         this.formulario.reset();
         this.campoDataCadastro.value = this.hojeISO();
-        this.abrirPopupDoFormulario(
-            'Cadastrar livro',
-            'Preencha os dados abaixo para adicionar o livro ao acervo.',
-            'Criar'
-        );
+        if (this.modalBackdrop) {
+            this.modalBackdrop.classList.add('open');
+        }
+    }
+
+    fecharModal() {
+        if (this.modalBackdrop) {
+            this.modalBackdrop.classList.remove('open');
+        }
+        if (this.formulario) {
+            this.formulario.reset();
+        }
+        this.livroEditandoId = null;
+    }
+
+    fecharVisualizacaoLivro() {
+        if (this.viewBackdrop) {
+            this.viewBackdrop.classList.remove('open');
+        }
+    }
+
+    visualizarLivro(livro) {
+        this.fecharModal();
+
+        if (this.viewTitle) this.viewTitle.textContent = livro.titulo || 'Livro';
+        if (this.viewSubtitle) this.viewSubtitle.textContent = livro.autor || 'Autor desconhecido';
+        if (this.viewAnoLancamento) this.viewAnoLancamento.textContent = this.formatarAnoLancamento(livro.data_lancamento || livro.data_cadastro);
+        if (this.viewDataCadastro) this.viewDataCadastro.textContent = this.formatarData(livro.data_cadastro);
+        if (this.viewCodigo) this.viewCodigo.textContent = livro.id_livro || 'Sem código';
+
+        // MOCK: contagem de exemplares em memória, deve ser substituída
+        // pela contagem real vinda da API de exemplares quando existir.
+        const mock = this.calcularMockExemplaresDisponiveis(livro.id_livro);
+        if (this.viewExemplaresDisponiveis) {
+            this.viewExemplaresDisponiveis.textContent = `${mock.disponiveis} de ${mock.total} exemplares disponíveis`;
+        }
+
+        if (this.viewBackdrop) {
+            this.viewBackdrop.classList.add('open');
+        }
+    }
+
+    formatarAnoLancamento(data) {
+        if (!data) return 'Sem data';
+        const date = new Date(`${data}T00:00:00`);
+        if (Number.isNaN(date.getTime())) return data;
+        return new Intl.DateTimeFormat('pt-BR', { year: 'numeric' }).format(date);
+    }
+
+    calcularMockExemplaresDisponiveis(idLivro) {
+        const id = Number(idLivro) || 1;
+        const total = 1 + (id % 6);
+        const disponiveis = (id * 2) % (total + 1);
+        return {
+            total,
+            disponiveis
+        };
     }
 
     editarLivro(livro) {
@@ -263,7 +347,6 @@ class TelaLivros {
         this.formulario.genero.value = livro.genero;
         this.formulario.ano_lancamento.value = livro.ano_lancamento;
         this.formulario.resumo.value = livro.resumo;
-        // A data de cadastro não muda na edição: mostra a do livro.
         this.campoDataCadastro.value = livro.data_cadastro;
         this.abrirPopupDoFormulario(
             'Editar livro',
@@ -272,14 +355,13 @@ class TelaLivros {
         );
     }
 
-    /* Deixa o popup pronto e guarda o estado inicial, para saber se mudou algo. */
     abrirPopupDoFormulario(titulo, subtitulo, textoDoBotao) {
         this.modalTitle.textContent = titulo;
         this.modalSubtitle.textContent = subtitulo;
         this.botaoSalvar.textContent = textoDoBotao;
         this.dadosOriginais = JSON.stringify(this.dadosDoFormulario());
         this.atualizarContadorResumo();
-        this.exibirMensagem('', '', this.mensagemForm);
+        this.exibirMensagem('', '', this.mensagemFormulario);
         this.modalBackdrop.classList.add('open');
         this.formulario.titulo.focus();
     }
@@ -298,7 +380,6 @@ class TelaLivros {
         return JSON.stringify(this.dadosDoFormulario()) !== this.dadosOriginais;
     }
 
-    /* Fechar pelo X (ou clicando fora) pede confirmação se algo mudou. */
     pedirFechamento() {
         const pergunta = this.livroEditandoId
             ? 'Deseja cancelar a edição do livro?'
@@ -314,48 +395,14 @@ class TelaLivros {
         this.livroEditandoId = null;
     }
 
-    visualizarLivro(livro) {
-        const valores = { ...livro, data_cadastro: this.formatarData(livro.data_cadastro) };
-        for (const elemento of this.viewBackdrop.querySelectorAll('[data-campo]')) {
-            elemento.textContent = valores[elemento.dataset.campo];
-        }
-        this.viewBackdrop.classList.add('open');
-    }
-
-    fecharVisualizacao() {
-        this.viewBackdrop.classList.remove('open');
-    }
-
-    confirmarExclusao(livro) {
-        this.livroExcluindo = livro;
-        this.confirmLivro.textContent = `"${livro.titulo}"`;
-        this.exibirMensagem('', '', this.mensagemExclusao);
-        this.confirmBackdrop.classList.add('open');
-        this.cancelDelete.focus();
-    }
-
-    fecharConfirmacao() {
-        this.confirmBackdrop.classList.remove('open');
-        this.livroExcluindo = null;
-    }
-
-    async excluirLivro() {
-        const livro = this.livroExcluindo;
-        if (!livro) return;
-
-        this.confirmDelete.disabled = true;
-        this.exibirMensagem('Excluindo...', '', this.mensagemExclusao);
-
-        try {
-            const excluido = await this.api.excluirLivro(livro.id_livro);
-            this.fecharConfirmacao();
-            await Promise.all([this.carregarOpcoesDeFiltro(), this.carregarLivros()]);
-            this.exibirMensagem(`Livro "${excluido.titulo}" excluído do acervo.`, 'sucesso');
-        } catch (erro) {
-            this.exibirMensagem(erro.message, 'erro', this.mensagemExclusao);
-        } finally {
-            this.confirmDelete.disabled = false;
-        }
+    preencherFormulario(livro) {
+        if (!this.formulario) return;
+        this.formulario.titulo.value = livro.titulo || '';
+        this.formulario.autor.value = livro.autor || '';
+        this.formulario.genero.value = livro.genero || '';
+        this.formulario.paginas.value = livro.paginas || '';
+        this.formulario.data_lancamento.value = livro.data_lancamento || livro.data_cadastro || '';
+        this.formulario.data_cadastro.value = livro.data_cadastro || new Date().toISOString().slice(0, 10);
     }
 
     atualizarContadorResumo() {
@@ -367,7 +414,6 @@ class TelaLivros {
         this.contadorResumo.classList.toggle('limite', atingiu);
     }
 
-    /* Só para mostrar no formulário; a data gravada é definida pelo servidor. */
     hojeISO() {
         const hoje = new Date();
         const mes = String(hoje.getMonth() + 1).padStart(2, '0');
@@ -382,7 +428,7 @@ class TelaLivros {
         const editando = this.livroEditandoId;
 
         this.botaoSalvar.disabled = true;
-        this.exibirMensagem('Salvando...', '', this.mensagemForm);
+        this.exibirMensagem('Salvando...', '', this.mensagemFormulario);
 
         try {
             const salvo = editando
@@ -396,7 +442,7 @@ class TelaLivros {
                 'sucesso'
             );
         } catch (erro) {
-            this.exibirMensagem(erro.message, 'erro', this.mensagemForm);
+            this.exibirMensagem(erro.message, 'erro', this.mensagemFormulario);
         } finally {
             this.botaoSalvar.disabled = false;
         }
@@ -405,11 +451,49 @@ class TelaLivros {
     exibirMensagem(texto, tipo = '', alvo = this.mensagem) {
         if (!alvo) return;
 
-        alvo.textContent = texto;
-        alvo.className = tipo ? `mensagem ${tipo}` : 'mensagem';
+        const classe = tipo ? `mensagem ${tipo}` : 'mensagem';
+
+        if (this.mensagem) {
+            this.mensagem.textContent = texto;
+            this.mensagem.className = classe;
+            this.mensagem.setAttribute('role', 'status');
+            this.mensagem.setAttribute('aria-live', 'polite');
+
+            if (tipo === 'sucesso') {
+                this.mensagem.classList.add('toast-visible');
+                clearTimeout(this.toastTimer);
+                clearTimeout(this.toastHideTimer);
+
+                this.toastTimer = setTimeout(() => {
+                    this.mensagem.classList.add('toast-leaving');
+                    this.mensagem.classList.remove('toast-visible');
+                }, 2600);
+
+                this.toastHideTimer = setTimeout(() => {
+                    this.mensagem.classList.remove('toast-visible', 'toast-leaving');
+                    this.mensagem.textContent = '';
+                    this.mensagem.className = 'mensagem';
+                }, 3400);
+            } else {
+                this.mensagem.classList.remove('toast-visible', 'toast-leaving');
+                clearTimeout(this.toastTimer);
+                clearTimeout(this.toastHideTimer);
+            }
+        }
+
+        if (this.mensagemFormulario) {
+            this.mensagemFormulario.textContent = texto;
+            this.mensagemFormulario.className = classe;
+        }
+
+        if (this.mensagemExclusao) {
+            this.mensagemExclusao.textContent = texto;
+            this.mensagemExclusao.className = classe;
+        }
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    if (!document.getElementById('formulario-livro') || !document.getElementById('modalBackdrop')) return;
     new TelaLivros(new Api()).iniciar();
 });

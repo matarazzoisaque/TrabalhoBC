@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Book — Empréstimos</title>
+    <script>
+        (function() {
+            const saved = localStorage.getItem('biblioteca-theme') || 'light';
+            const theme = saved === 'dark' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+    <div class="app">
+        <header class="site-header">
+            <a class="logo" href="index.html" aria-label="Book Book">
+                <span class="logo-mark">Book Book</span>
+            </a>
+
+            <nav class="site-nav" aria-label="Navegação principal">
+                <a class="nav-link" href="index.html">Início</a>
+                <a class="nav-link" href="cadastro.html">Livros</a>
+                <a class="nav-link" href="leitores.html">Leitores</a>
+                <a class="nav-link" href="exemplares.html">Exemplares</a>
+                <a class="nav-link active" href="emprestimos.html">Empréstimos</a>
+            </nav>
+
+            <button class="theme-toggle" id="themeToggle" aria-label="Alternar tema">
+                <span class="theme-icon" aria-hidden="true">☀</span>
+            </button>
+        </header>
+
+        <main class="catalog-wrap">
+            <section class="catalog-head">
+                <div class="catalog-title-block">
+                    <span class="chapter-label">Acervo digital</span>
+                    <h1>Empréstimos</h1>
+                </div>
+
+                <div class="catalog-actions">
+                    <button class="primary-button open-form" id="openForm">
+                        <span aria-hidden="true">+</span> Novo empréstimo
+                    </button>
+                </div>
+            </section>
+
+            <section class="catalog-toolbar">
+                <div class="search-box">
+                    <span class="search-icon" aria-hidden="true">⌕</span>
+                    <input type="search" id="searchInput" placeholder="Buscar por leitor ou livro">
+                </div>
+            </section>
+
+            <section class="catalog-list-wrapper">
+                <div class="catalog-list" id="catalogList">
+                </div>
+            </section>
+
+            <p id="mensagem" class="mensagem" role="status"></p>
+        </main>
+    </div>
+
+    <div class="modal-backdrop" id="modalCadastro">
+        <section class="modal-card" role="dialog" aria-modal="true">
+            <button class="modal-close" id="closeCadastro" aria-label="Fechar">×</button>
+            <div class="modal-head">
+                <span class="chapter-label">Book Book</span>
+                <h2 id="modalTitle">Novo empréstimo</h2>
+            </div>
+
+            <form id="formulario-emprestimo" class="formulario">
+                <p id="mensagem-formulario" class="mensagem mensagem-formulario" role="status"></p>
+
+                <div class="form-grid">
+                    <div class="campo">
+                        <label for="leitorSelect">Leitor</label>
+                        <select id="leitorSelect" name="leitorSelect" required>
+                            <option value="">Selecione um leitor</option>
+                        </select>
+                    </div>
+
+                    <div class="campo">
+                        <label for="exemplarSelect">Exemplar</label>
+                        <select id="exemplarSelect" name="exemplarSelect" required>
+                            <option value="">Selecione um exemplar</option>
+                        </select>
+                    </div>
+
+                    <div class="campo">
+                        <label for="data_emprestimo">Data do empréstimo</label>
+                        <input type="date" id="data_emprestimo" name="data_emprestimo" readonly>
+                    </div>
+
+                    <div class="campo">
+                        <label for="prazo_dias">Prazo para devolução (dias)</label>
+                        <input type="number" id="prazo_dias" name="prazo_dias" min="1" value="7" required>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="button button-muted" id="cancelForm">Voltar</button>
+                    <button type="submit" class="button button-primary">Salvar empréstimo</button>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <div class="modal-backdrop" id="modalConfirmacao">
+        <section class="modal-card modal-confirm" role="dialog" aria-modal="true">
+            <button class="modal-close" id="closeConfirmacao" aria-label="Fechar">×</button>
+            <div class="modal-head">
+                <span class="chapter-label">Book Book</span>
+                <h2 id="confirmTitle">Registrar devolução</h2>
+            </div>
+
+            <div class="confirm-content">
+                <p id="confirmText">Confirma a devolução de '<span id="confirmLivro">Livro</span>' por <span id="confirmLeitor">Leitor</span>?</p>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="button button-muted" id="cancelDelete">Cancelar</button>
+                <button type="button" class="button button-primary" id="confirmDelete">Confirmar devolução</button>
+            </div>
+        </section>
+    </div>
+
+    <script src="assets/js/api.js" defer></script>
+    <script src="assets/js/emprestimos.js" defer></script>
+</body>
+</html>

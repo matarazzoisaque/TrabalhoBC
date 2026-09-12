@@ -4,14 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Book Book</title>
+    <script>
+        (function() {
+            const saved = localStorage.getItem('biblioteca-theme') || 'light';
+            const theme = saved === 'dark' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
-<body data-theme="light">
+<body>
     <div class="app">
         <header class="site-header">
             <a class="logo" href="index.html" aria-label="Book Book">
                 <span class="logo-mark">Book Book</span>
             </a>
+
+            <nav class="site-nav" aria-label="Navegação principal">
+                <a class="nav-link active" href="index.html">Início</a>
+                <a class="nav-link" href="cadastro.html">Livros</a>
+                <a class="nav-link" href="leitores.html">Leitores</a>
+                <a class="nav-link" href="exemplares.html">Exemplares</a>
+                <a class="nav-link" href="emprestimos.html">Empréstimos</a>
+            </nav>
 
             <button class="theme-toggle" id="themeToggle" aria-label="Alternar tema">
                 <span class="theme-icon" aria-hidden="true">☀</span>
