@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Book — Exemplares</title>
+    <script>
+        (function() {
+            const saved = localStorage.getItem('biblioteca-theme') || 'light';
+            const theme = saved === 'dark' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+    <div class="app">
+        <header class="site-header">
+            <a class="logo" href="index.html" aria-label="Book Book">
+                <span class="logo-mark">Book Book</span>
+            </a>
+
+            <nav class="site-nav" aria-label="Navegação principal">
+                <a class="nav-link" href="index.html">Início</a>
+                <a class="nav-link" href="cadastro.html">Livros</a>
+                <a class="nav-link" href="leitores.html">Leitores</a>
+                <a class="nav-link active" href="exemplares.html">Exemplares</a>
+                <a class="nav-link" href="emprestimos.html">Empréstimos</a>
+            </nav>
+
+            <button class="theme-toggle" id="themeToggle" aria-label="Alternar tema">
+                <span class="theme-icon" aria-hidden="true">☀</span>
+            </button>
+        </header>
+
+        <main class="catalog-wrap">
+            <section class="catalog-head">
+                <div class="catalog-title-block">
+                    <span class="chapter-label">Acervo digital</span>
+                    <h1>Exemplares</h1>
+                </div>
+
+                <div class="catalog-actions">
+                    <button class="primary-button open-form" id="openForm">
+                        <span aria-hidden="true">+</span> Cadastrar novo exemplar
+                    </button>
+                </div>
+            </section>
+
+            <section class="catalog-toolbar">
+                <div class="search-box">
+                    <span class="search-icon" aria-hidden="true">⌕</span>
+                    <input type="search" id="searchInput" placeholder="Buscar por título do livro">
+                </div>
+            </section>
+
+            <section class="catalog-list-wrapper">
+                <div class="catalog-list exemplar-grid" id="catalogList">
+                </div>
+            </section>
+
+            <p id="mensagem" class="mensagem" role="status"></p>
+        </main>
+    </div>
+
+    <div class="modal-backdrop" id="modalCadastro">
+        <section class="modal-card" role="dialog" aria-modal="true">
+            <button class="modal-close" id="closeCadastro" aria-label="Fechar">×</button>
+            <div class="modal-head">
+                <span class="chapter-label">Book Book</span>
+                <h2 id="modalTitle">Cadastrar exemplar</h2>
+            </div>
+
+            <form id="formulario-exemplar" class="formulario">
+                <p id="mensagem-formulario" class="mensagem mensagem-formulario" role="status"></p>
+
+                <div class="form-grid">
+                    <div class="campo">
+                        <label for="livroSelect">Livro</label>
+                        <select id="livroSelect" name="livroSelect" required>
+                            <option value="">Selecione um livro</option>
+                        </select>
+                    </div>
+
+                    <div class="campo">
+                        <label for="quantidade">Quantidade</label>
+                        <input type="number" id="quantidade" name="quantidade" min="1" value="1" required>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="button button-muted" id="cancelForm">Voltar</button>
+                    <button type="submit" class="button button-primary">Cadastrar exemplar</button>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <div class="modal-backdrop" id="modalConfirmacao">
+        <section class="modal-card modal-confirm" role="dialog" aria-modal="true">
+            <button class="modal-close" id="closeConfirmacao" aria-label="Fechar">×</button>
+            <div class="modal-head">
+                <span class="chapter-label">Book Book</span>
+                <h2 id="confirmTitle">Confirmar exclusão</h2>
+            </div>
+
+            <div class="confirm-content">
+                <p id="confirmText">Deseja excluir este exemplar?</p>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="button button-muted" id="cancelDelete">Cancelar</button>
+                <button type="button" class="button button-primary" id="confirmDelete">Excluir exemplar</button>
+            </div>
+        </section>
+    </div>
+
+    <div class="modal-backdrop" id="viewBackdropExemplar">
+        <section class="modal-card modal-view-card" role="dialog" aria-modal="true">
+            <button class="modal-close" id="closeViewExemplar" aria-label="Fechar">×</button>
+            <div class="modal-head">
+                <span class="chapter-label">Book Book</span>
+                <h2 id="viewExemplarTitle">Livro</h2>
+                <p class="modal-subtitle" id="viewExemplarAutor">Autor</p>
+            </div>
+
+            <div class="view-content">
+                <dl class="view-grid">
+                    <div class="view-row">
+                        <dt class="view-label">Status</dt>
+                        <dd class="view-value" id="viewExemplarStatus"></dd>
+                    </div>
+                    <div class="view-row">
+                        <dt class="view-label">Código do exemplar</dt>
+                        <dd class="view-value" id="viewExemplarCodigo"></dd>
+                    </div>
+                    <div class="view-row">
+                        <dt class="view-label">Gênero do livro</dt>
+                        <dd class="view-value" id="viewExemplarGenero"></dd>
+                    </div>
+                </dl>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="button button-muted" id="closeViewBookExemplar">Voltar</button>
+            </div>
+        </section>
+    </div>
+
+    <script src="assets/js/api.js" defer></script>
+    <script src="assets/js/exemplares.js" defer></script>
+</body>
+</html>
