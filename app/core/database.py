@@ -44,13 +44,16 @@ class Database:
             self.fechar()
 
     def executar(self, sql: str, params: tuple = ()) -> int:
-        """Executa um INSERT, faz commit e devolve o id gerado."""
+        """Executa INSERT, UPDATE ou DELETE e faz commit.
+
+        Devolve o id gerado (no INSERT) ou o número de linhas afetadas.
+        """
         self.conectar()
         try:
             cursor = self.conexao.cursor()
             cursor.execute(sql, params)
             self.conexao.commit()
-            return cursor.lastrowid
+            return cursor.lastrowid or cursor.rowcount
         except mysql.connector.Error as erro:
             self.conexao.rollback()
             raise ErroBanco(f"Erro ao gravar no banco: {erro}") from erro

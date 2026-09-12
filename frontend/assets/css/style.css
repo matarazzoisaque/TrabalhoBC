@@ -875,3 +875,34 @@ body[data-theme="dark"] .campo textarea {
         grid-template-columns: 1fr;
     }
 }
+
+/* Fundo dos popups: escurece e desfoca de leve o que está atrás */
+
+.modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.38);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+}
+
+/* Popup de confirmação da exclusão */
+
+.confirm-card {
+    width: min(460px, calc(100vw - 2rem));
+}
+
+.button-danger {
+    background-color: #b3261e;
+    border-color: #b3261e;
+    color: #ffffff;
+}
+
+body[data-theme="dark"] .button-danger {
+    background-color: #c0392b;
+    border-color: #c0392b;
+}
+
+.button-danger:disabled {
+    opacity: 0.6;
+    cursor: default;
+    transform: none;
+}

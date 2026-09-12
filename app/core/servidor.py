@@ -13,6 +13,7 @@ from pathlib import Path
 from urllib.parse import parse_qsl, urlsplit
 
 from app.core.database import ErroBanco
+from app.services.livro_service import NAO_ENCONTRADO
 
 PASTA_FRONTEND = Path(__file__).resolve().parents[2] / "frontend"
 ROTA_LIVROS = "/api/livros"
@@ -60,12 +61,42 @@ class Servidor(SimpleHTTPRequestHandler):
             self._responder(400, {"erro": " ".join(resultado)})
 
     def do_PUT(self):
-        """/api/livros/{id}: edita um livro."""
-        raise NotImplementedError
+        """/api/livros/{id} edita um livro."""
+        id_livro = self._extrair_id(urlsplit(self.path).path)
+        if id_livro is None:
+            self._responder(404, {"erro": "Rota não encontrada."})
+            return
+        try:
+            ok, resultado = self.service.editar(id_livro, self._ler_corpo())
+        except json.JSONDecodeError:
+            self._responder(400, {"erro": "O corpo enviado não é um JSON válido."})
+            return
+        except ErroBanco as erro:
+            self._responder(503, {"erro": str(erro)})
+            return
+
+        if ok:
+            self._responder(200, resultado)
+        else:
+            self._responder(404 if resultado == [NAO_ENCONTRADO] else 400,
+                            {"erro": " ".join(resultado)})
 
     def do_DELETE(self):
-        """/api/livros/{id}: remove um livro (exclusão lógica)."""
-        raise NotImplementedError
+        """/api/livros/{id} exclui um livro."""
+        id_livro = self._extrair_id(urlsplit(self.path).path)
+        if id_livro is None:
+            self._responder(404, {"erro": "Rota não encontrada."})
+            return
+        try:
+            ok, resultado = self.service.remover(id_livro)
+        except ErroBanco as erro:
+            self._responder(503, {"erro": str(erro)})
+            return
+
+        if ok:
+            self._responder(200, resultado)
+        else:
+            self._responder(404, {"erro": " ".join(resultado)})
 
     def end_headers(self):
         """Faz o navegador sempre conferir se o arquivo mudou (sem cache velho)."""
@@ -86,9 +117,12 @@ class Servidor(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(corpo)
 
-    def _extrair_id(self, caminho):
-        """Pega o {id} de uma URL no formato /api/livros/{id}."""
-        raise NotImplementedError
+    def _extrair_id(self, caminho: str) -> int | None:
+        """Pega o {id} de uma URL /api/livros/{id}. Devolve None se não for um id."""
+        if not caminho.startswith(ROTA_LIVROS + "/"):
+            return None
+        resto = caminho[len(ROTA_LIVROS) + 1:]
+        return int(resto) if resto.isdigit() else None
 
     def _servir_estatico(self) -> None:
         """Entrega os arquivos HTML, CSS e JS da pasta frontend/."""

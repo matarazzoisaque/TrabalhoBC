@@ -13,7 +13,10 @@ from app.models.livro import Livro
 from app.repositories.livro_repository import LivroRepository
 
 # Filtros que a tela pode enviar na listagem.
-FILTROS = ("busca", "autor", "genero", "ordem")
+FILTROS = ("busca", "genero", "periodo", "ordem")
+
+# Mensagem usada pelo Servidor para responder 404 em vez de 400.
+NAO_ENCONTRADO = "Livro não encontrado."
 
 
 class LivroService:
@@ -55,10 +58,32 @@ class LivroService:
         """Busca o livro e devolve erro se ele não existir."""
         raise NotImplementedError
 
-    def editar(self, id, dados):
-        """Confere se existe, valida, checa duplicata (com ignorar_id) e atualiza."""
-        raise NotImplementedError
+    def editar(self, id_livro: int, dados: dict) -> tuple[bool, dict | list[str]]:
+        """Confere se existe, valida, checa duplicata e atualiza.
 
-    def remover(self, id):
-        """Confere se existe e exclui (exclusão lógica)."""
-        raise NotImplementedError
+        O id e a data de cadastro do livro original são mantidos: a edição
+        muda só os dados do livro.
+        """
+        atual = self.repository.buscar_por_id(id_livro)
+        if atual is None:
+            return False, [NAO_ENCONTRADO]
+
+        try:
+            livro = Livro.model_validate(dados)
+        except ValidationError as erro:
+            return False, Livro.mensagens_de_erro(erro)
+
+        if self.repository.existe_duplicado(livro.titulo, livro.autor, ignorar_id=id_livro):
+            return False, ["Já existe um livro com esse título e autor."]
+
+        livro = livro.model_copy(update={"id_livro": id_livro, "data_cadastro": atual.data_cadastro})
+        return True, self.repository.atualizar(livro).model_dump(mode="json")
+
+    def remover(self, id_livro: int) -> tuple[bool, dict | list[str]]:
+        """Confere se o livro existe e o exclui. Devolve o livro excluído."""
+        livro = self.repository.buscar_por_id(id_livro)
+        if livro is None:
+            return False, [NAO_ENCONTRADO]
+
+        self.repository.excluir(id_livro)
+        return True, livro.model_dump(mode="json")

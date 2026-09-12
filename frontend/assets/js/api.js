@@ -32,6 +32,20 @@ class Api {
         });
     }
 
+    /* Envia as alterações de um livro já cadastrado. */
+    async atualizarLivro(idLivro, livro) {
+        return this.requisitar(`/livros/${idLivro}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(livro)
+        });
+    }
+
+    /* Exclui um livro do acervo. */
+    async excluirLivro(idLivro) {
+        return this.requisitar(`/livros/${idLivro}`, { method: 'DELETE' });
+    }
+
     /* Faz a requisição e transforma erro do servidor em exceção. */
     async requisitar(caminho, opcoes = {}) {
         let resposta;

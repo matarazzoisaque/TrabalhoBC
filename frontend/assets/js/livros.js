@@ -9,22 +9,34 @@ class TelaLivros {
         this.api = api;
         this.mensagem = document.getElementById('mensagem');
         this.mensagemForm = document.getElementById('mensagem-form');
+        this.mensagemExclusao = document.getElementById('mensagem-exclusao');
         this.catalogList = document.getElementById('catalogList');
         this.formulario = document.getElementById('formulario-livro');
         this.modalBackdrop = document.getElementById('modalBackdrop');
+        this.modalTitle = document.getElementById('modalTitle');
+        this.modalSubtitle = document.getElementById('modalSubtitle');
         this.closeModal = document.getElementById('closeModal');
         this.viewBackdrop = document.getElementById('viewBackdrop');
         this.closeView = document.getElementById('closeView');
+        this.confirmBackdrop = document.getElementById('confirmBackdrop');
+        this.closeConfirm = document.getElementById('closeConfirm');
+        this.cancelDelete = document.getElementById('cancelDelete');
+        this.confirmDelete = document.getElementById('confirmDelete');
+        this.confirmLivro = document.getElementById('confirmLivro');
         this.openForm = document.getElementById('openForm');
         this.searchInput = document.getElementById('searchInput');
-        this.filterAutor = document.getElementById('filterAutor');
         this.filterGenero = document.getElementById('filterGenero');
+        this.filterPeriodo = document.getElementById('filterPeriodo');
         this.sortSelect = document.getElementById('sortSelect');
         this.campoAno = document.getElementById('ano_lancamento');
         this.campoDataCadastro = document.getElementById('data_cadastro');
         this.campoResumo = document.getElementById('resumo');
         this.contadorResumo = document.getElementById('contador-resumo');
         this.themeToggle = document.getElementById('themeToggle');
+        this.botaoSalvar = null;
+        this.livroEditandoId = null;
+        this.livroExcluindo = null;
+        this.dadosOriginais = null;
         this.esperaBusca = null;
     }
 
@@ -38,6 +50,7 @@ class TelaLivros {
         this.configurarCatalogo();
         this.configurarCadastro();
         this.configurarVisualizacao();
+        this.configurarExclusao();
         this.carregarOpcoesDeFiltro();
         this.carregarLivros();
     }
@@ -77,16 +90,18 @@ class TelaLivros {
             this.esperaBusca = setTimeout(() => this.carregarLivros(), 300);
         });
 
-        for (const filtro of [this.filterAutor, this.filterGenero, this.sortSelect]) {
+        for (const filtro of [this.filterGenero, this.filterPeriodo, this.sortSelect]) {
             filtro.addEventListener('change', () => this.carregarLivros());
         }
     }
 
     configurarCadastro() {
+        this.botaoSalvar = this.formulario.querySelector('button[type="submit"]');
+
         this.formulario.addEventListener('submit', (evento) => this.salvar(evento));
-        this.closeModal.addEventListener('click', () => this.pedirFechamentoCadastro());
+        this.closeModal.addEventListener('click', () => this.pedirFechamento());
         this.modalBackdrop.addEventListener('click', (evento) => {
-            if (evento.target === this.modalBackdrop) this.pedirFechamentoCadastro();
+            if (evento.target === this.modalBackdrop) this.pedirFechamento();
         });
 
         this.campoAno.max = new Date().getFullYear();
@@ -100,10 +115,18 @@ class TelaLivros {
         });
     }
 
+    configurarExclusao() {
+        this.confirmDelete.addEventListener('click', () => this.excluirLivro());
+        this.cancelDelete.addEventListener('click', () => this.fecharConfirmacao());
+        this.closeConfirm.addEventListener('click', () => this.fecharConfirmacao());
+        this.confirmBackdrop.addEventListener('click', (evento) => {
+            if (evento.target === this.confirmBackdrop) this.fecharConfirmacao();
+        });
+    }
+
     async carregarOpcoesDeFiltro() {
         try {
             const opcoes = await this.api.opcoesDeFiltro();
-            this.preencherSelect(this.filterAutor, opcoes.autores);
             this.preencherSelect(this.filterGenero, opcoes.generos);
         } catch (erro) {
             this.exibirMensagem(erro.message, 'erro');
@@ -123,8 +146,8 @@ class TelaLivros {
     filtrosAtuais() {
         return {
             busca: this.searchInput.value,
-            autor: this.filterAutor.value,
             genero: this.filterGenero.value,
+            periodo: this.filterPeriodo.value,
             ordem: this.sortSelect.value
         };
     }
@@ -145,7 +168,7 @@ class TelaLivros {
         this.catalogList.replaceChildren();
 
         if (livros.length === 0) {
-            const filtrando = filtros.busca.trim() || filtros.autor || filtros.genero;
+            const filtrando = filtros.busca.trim() || filtros.genero || filtros.periodo;
             this.exibirMensagem(filtrando
                 ? 'Nenhum livro encontrado com esses filtros.'
                 : 'Nenhum livro cadastrado ainda. Clique em "Cadastrar novo livro".');
@@ -169,9 +192,11 @@ class TelaLivros {
         const ver = this.criarBotaoAcao('👁', 'Ver livro', 'view');
         ver.addEventListener('click', () => this.visualizarLivro(livro));
 
-        // Editar e excluir ainda não têm função: por enquanto são só visuais.
-        const editar = this.criarBotaoAcao('✎', 'Editar livro (em breve)', 'edit');
-        const excluir = this.criarBotaoAcao('×', 'Excluir livro (em breve)', 'delete');
+        const editar = this.criarBotaoAcao('✎', 'Editar livro', 'edit');
+        editar.addEventListener('click', () => this.editarLivro(livro));
+
+        const excluir = this.criarBotaoAcao('×', 'Excluir livro', 'delete');
+        excluir.addEventListener('click', () => this.confirmarExclusao(livro));
 
         const acoes = this.criarElemento('div', 'book-actions');
         acoes.append(ver, editar, excluir);
@@ -221,28 +246,72 @@ class TelaLivros {
     }
 
     abrirCadastro() {
+        this.livroEditandoId = null;
         this.formulario.reset();
         this.campoDataCadastro.value = this.hojeISO();
+        this.abrirPopupDoFormulario(
+            'Cadastrar livro',
+            'Preencha os dados abaixo para adicionar o livro ao acervo.',
+            'Criar'
+        );
+    }
+
+    editarLivro(livro) {
+        this.livroEditandoId = livro.id_livro;
+        this.formulario.titulo.value = livro.titulo;
+        this.formulario.autor.value = livro.autor;
+        this.formulario.genero.value = livro.genero;
+        this.formulario.ano_lancamento.value = livro.ano_lancamento;
+        this.formulario.resumo.value = livro.resumo;
+        // A data de cadastro não muda na edição: mostra a do livro.
+        this.campoDataCadastro.value = livro.data_cadastro;
+        this.abrirPopupDoFormulario(
+            'Editar livro',
+            'Altere os dados do livro e salve as mudanças.',
+            'Salvar alterações'
+        );
+    }
+
+    /* Deixa o popup pronto e guarda o estado inicial, para saber se mudou algo. */
+    abrirPopupDoFormulario(titulo, subtitulo, textoDoBotao) {
+        this.modalTitle.textContent = titulo;
+        this.modalSubtitle.textContent = subtitulo;
+        this.botaoSalvar.textContent = textoDoBotao;
+        this.dadosOriginais = JSON.stringify(this.dadosDoFormulario());
         this.atualizarContadorResumo();
         this.exibirMensagem('', '', this.mensagemForm);
         this.modalBackdrop.classList.add('open');
         this.formulario.titulo.focus();
     }
 
-    formularioPreenchido() {
-        return ['titulo', 'autor', 'genero', 'ano_lancamento', 'resumo']
-            .some((campo) => this.formulario[campo].value.trim() !== '');
+    dadosDoFormulario() {
+        return {
+            titulo: this.formulario.titulo.value,
+            autor: this.formulario.autor.value,
+            genero: this.formulario.genero.value,
+            ano_lancamento: this.formulario.ano_lancamento.value,
+            resumo: this.formulario.resumo.value
+        };
     }
 
-    /* Fechar pelo X (ou clicando fora) pede confirmação se algo foi digitado. */
-    pedirFechamentoCadastro() {
-        if (this.formularioPreenchido() && !window.confirm('Deseja cancelar o cadastro do livro?')) return;
-        this.fecharCadastro();
+    formularioAlterado() {
+        return JSON.stringify(this.dadosDoFormulario()) !== this.dadosOriginais;
     }
 
-    fecharCadastro() {
+    /* Fechar pelo X (ou clicando fora) pede confirmação se algo mudou. */
+    pedirFechamento() {
+        const pergunta = this.livroEditandoId
+            ? 'Deseja cancelar a edição do livro?'
+            : 'Deseja cancelar o cadastro do livro?';
+
+        if (this.formularioAlterado() && !window.confirm(pergunta)) return;
+        this.fecharFormulario();
+    }
+
+    fecharFormulario() {
         this.modalBackdrop.classList.remove('open');
         this.formulario.reset();
+        this.livroEditandoId = null;
     }
 
     visualizarLivro(livro) {
@@ -255,6 +324,38 @@ class TelaLivros {
 
     fecharVisualizacao() {
         this.viewBackdrop.classList.remove('open');
+    }
+
+    confirmarExclusao(livro) {
+        this.livroExcluindo = livro;
+        this.confirmLivro.textContent = `"${livro.titulo}"`;
+        this.exibirMensagem('', '', this.mensagemExclusao);
+        this.confirmBackdrop.classList.add('open');
+        this.cancelDelete.focus();
+    }
+
+    fecharConfirmacao() {
+        this.confirmBackdrop.classList.remove('open');
+        this.livroExcluindo = null;
+    }
+
+    async excluirLivro() {
+        const livro = this.livroExcluindo;
+        if (!livro) return;
+
+        this.confirmDelete.disabled = true;
+        this.exibirMensagem('Excluindo...', '', this.mensagemExclusao);
+
+        try {
+            const excluido = await this.api.excluirLivro(livro.id_livro);
+            this.fecharConfirmacao();
+            await Promise.all([this.carregarOpcoesDeFiltro(), this.carregarLivros()]);
+            this.exibirMensagem(`Livro "${excluido.titulo}" excluído do acervo.`, 'sucesso');
+        } catch (erro) {
+            this.exibirMensagem(erro.message, 'erro', this.mensagemExclusao);
+        } finally {
+            this.confirmDelete.disabled = false;
+        }
     }
 
     atualizarContadorResumo() {
@@ -277,27 +378,27 @@ class TelaLivros {
     async salvar(evento) {
         evento.preventDefault();
 
-        const livro = {
-            titulo: this.formulario.titulo.value,
-            autor: this.formulario.autor.value,
-            genero: this.formulario.genero.value,
-            ano_lancamento: this.formulario.ano_lancamento.value,
-            resumo: this.formulario.resumo.value
-        };
+        const livro = this.dadosDoFormulario();
+        const editando = this.livroEditandoId;
 
-        const botao = this.formulario.querySelector('button[type="submit"]');
-        botao.disabled = true;
+        this.botaoSalvar.disabled = true;
         this.exibirMensagem('Salvando...', '', this.mensagemForm);
 
         try {
-            const salvo = await this.api.cadastrarLivro(livro);
-            this.fecharCadastro();
+            const salvo = editando
+                ? await this.api.atualizarLivro(editando, livro)
+                : await this.api.cadastrarLivro(livro);
+
+            this.fecharFormulario();
             await Promise.all([this.carregarOpcoesDeFiltro(), this.carregarLivros()]);
-            this.exibirMensagem(`Livro "${salvo.titulo}" cadastrado com sucesso.`, 'sucesso');
+            this.exibirMensagem(
+                `Livro "${salvo.titulo}" ${editando ? 'atualizado' : 'cadastrado'} com sucesso.`,
+                'sucesso'
+            );
         } catch (erro) {
             this.exibirMensagem(erro.message, 'erro', this.mensagemForm);
         } finally {
-            botao.disabled = false;
+            this.botaoSalvar.disabled = false;
         }
     }
 

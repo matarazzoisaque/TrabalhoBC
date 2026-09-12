@@ -40,16 +40,22 @@
 
                 <div class="filter-row">
                     <label class="filter-label">
-                        <span>Autor</span>
-                        <select id="filterAutor">
+                        <span>Gênero</span>
+                        <select id="filterGenero">
                             <option value="">Todos</option>
                         </select>
                     </label>
 
                     <label class="filter-label">
-                        <span>Gênero</span>
-                        <select id="filterGenero">
+                        <span>Ano de lançamento</span>
+                        <select id="filterPeriodo">
                             <option value="">Todos</option>
+                            <option value="2020-hoje">2020 até hoje</option>
+                            <option value="2010-2019">2010–2019</option>
+                            <option value="2000-2009">2000–2009</option>
+                            <option value="1950-1999">1950–1999</option>
+                            <option value="1900-1949">1900–1949</option>
+                            <option value="ate-1899">Antes de 1900</option>
                         </select>
                     </label>
 
@@ -84,7 +90,7 @@
             <div class="modal-head">
                 <span class="chapter-label">Book Book</span>
                 <h2 id="modalTitle">Cadastrar livro</h2>
-                <p class="modal-subtitle">Preencha os dados abaixo para adicionar o livro ao acervo.</p>
+                <p class="modal-subtitle" id="modalSubtitle">Preencha os dados abaixo para adicionar o livro ao acervo.</p>
             </div>
 
             <form id="formulario-livro" class="formulario" novalidate>
@@ -166,6 +172,28 @@
             <div class="view-resumo">
                 <h3>Resumo</h3>
                 <p data-campo="resumo"></p>
+            </div>
+        </section>
+    </div>
+
+    <div class="modal-backdrop" id="confirmBackdrop">
+        <section class="modal-card confirm-card" role="alertdialog" aria-modal="true"
+                 aria-labelledby="confirmTitulo">
+            <button class="modal-close" id="closeConfirm" aria-label="Fechar">×</button>
+            <div class="modal-head">
+                <span class="chapter-label">Confirmação</span>
+                <h2 id="confirmTitulo">Excluir livro</h2>
+                <p class="modal-subtitle">
+                    Tem certeza que deseja excluir <strong id="confirmLivro"></strong> do acervo?
+                    Esta ação não pode ser desfeita.
+                </p>
+            </div>
+
+            <p id="mensagem-exclusao" class="mensagem" role="alert"></p>
+
+            <div class="form-actions">
+                <button type="button" class="button button-muted" id="cancelDelete">Cancelar</button>
+                <button type="button" class="button button-danger" id="confirmDelete">Excluir</button>
             </div>
         </section>
     </div>
