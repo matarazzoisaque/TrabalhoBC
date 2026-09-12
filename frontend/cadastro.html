@@ -55,13 +55,6 @@
 
                 <div class="filter-row">
                     <label class="filter-label">
-                        <span>Autor</span>
-                        <select id="filterAutor">
-                            <option value="">Todos</option>
-                        </select>
-                    </label>
-
-                    <label class="filter-label">
                         <span>Gênero</span>
                         <select id="filterGenero">
                             <option value="">Todos</option>
@@ -69,15 +62,15 @@
                     </label>
 
                     <label class="filter-label">
-                        <span>Páginas</span>
-                        <select id="filterPaginas">
-                            <option value="">Todas</option>
-                            <option value="0-100">0–100</option>
-                            <option value="100-200">100–200</option>
-                            <option value="200-300">200–300</option>
-                            <option value="300-400">300–400</option>
-                            <option value="400-500">400–500</option>
-                            <option value="500+">500+</option>
+                        <span>Ano de lançamento</span>
+                        <select id="filterPeriodo">
+                            <option value="">Todos</option>
+                            <option value="2020-hoje">2020 até hoje</option>
+                            <option value="2010-2019">2010–2019</option>
+                            <option value="2000-2009">2000–2009</option>
+                            <option value="1950-1999">1950–1999</option>
+                            <option value="1900-1949">1900–1949</option>
+                            <option value="ate-1899">Antes de 1900</option>
                         </select>
                     </label>
 
@@ -90,8 +83,8 @@
                             <option value="paginas-desc">Páginas maior → menor</option>
                             <option value="data-desc">Data de cadastro novo → antigo</option>
                             <option value="data-asc">Data de cadastro antigo → novo</option>
-                            <option value="lancamento-desc">Data de lançamento novo → antigo</option>
-                            <option value="lancamento-asc">Data de lançamento antigo → novo</option>
+                            <option value="lancamento-desc">Ano de lançamento novo → antigo</option>
+                            <option value="lancamento-asc">Ano de lançamento antigo → novo</option>
                         </select>
                     </label>
                 </div>
@@ -107,11 +100,12 @@
     </div>
 
     <div class="modal-backdrop" id="modalBackdrop">
-        <section class="modal-card" role="dialog" aria-modal="true">
+        <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
             <button class="modal-close" id="closeModal" aria-label="Fechar">×</button>
             <div class="modal-head">
                 <span class="chapter-label">Book Book</span>
                 <h2 id="modalTitle">Cadastrar livro</h2>
+                <p class="modal-subtitle" id="modalSubtitle">Preencha os dados abaixo para adicionar o livro ao acervo.</p>
             </div>
 
             <form id="formulario-livro" class="formulario">
@@ -189,6 +183,28 @@
 
             <div class="form-actions">
                 <button type="button" class="button button-muted" id="closeViewBook">Voltar</button>
+            </div>
+        </section>
+    </div>
+
+    <div class="modal-backdrop" id="confirmBackdrop">
+        <section class="modal-card confirm-card" role="alertdialog" aria-modal="true"
+                 aria-labelledby="confirmTitulo">
+            <button class="modal-close" id="closeConfirm" aria-label="Fechar">×</button>
+            <div class="modal-head">
+                <span class="chapter-label">Confirmação</span>
+                <h2 id="confirmTitulo">Excluir livro</h2>
+                <p class="modal-subtitle">
+                    Tem certeza que deseja excluir <strong id="confirmLivro"></strong> do acervo?
+                    Esta ação não pode ser desfeita.
+                </p>
+            </div>
+
+            <p id="mensagem-exclusao" class="mensagem" role="alert"></p>
+
+            <div class="form-actions">
+                <button type="button" class="button button-muted" id="cancelDelete">Cancelar</button>
+                <button type="button" class="button button-danger" id="confirmDelete">Excluir</button>
             </div>
         </section>
     </div>

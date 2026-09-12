@@ -1,65 +1,67 @@
 """Conexão com o banco de dados MySQL.
 
-A classe `Database` concentra tudo o que envolve o banco: abrir a conexão,
-executar comandos e devolver os resultados já convertidos para tipos comuns
-do Python. Nenhuma outra camada do projeto importa o driver diretamente.
+Database é a única classe do projeto que importa o mysql.connector. Recebe
+SQL pronto e parâmetros, executa e devolve o resultado. Não sabe o que é um
+livro.
 """
 
-from config import config
-
-try:
-    import mysql.connector
-except ImportError:  # driver ainda não instalado
-    mysql = None
+import mysql.connector
 
 
 class ErroBanco(Exception):
-    """Falha ao conectar ou ao executar um comando no banco."""
+    """Falha ao conectar ou ao executar um comando no MySQL."""
 
 
 class Database:
-    """Executa comandos SQL no MySQL."""
+    """Encapsula a conexão com o MySQL."""
 
-    def conectar(self):
-        """Abre e devolve uma nova conexão com o MySQL."""
-        if mysql is None:
-            raise ErroBanco(
-                "Driver do MySQL não instalado. "
-                "Execute: pip install -r requirements.txt"
-            )
+    def __init__(self, host: str, usuario: str, senha: str, banco: str):
+        self.host = host
+        self.usuario = usuario
+        self.senha = senha
+        self.banco = banco
+        self.conexao = None
+
+    def conectar(self) -> None:
+        """Abre a conexão e guarda em self.conexao."""
         try:
-            return mysql.connector.connect(
-                host=config.DB_HOST,
-                port=config.DB_PORT,
-                user=config.DB_USER,
-                password=config.DB_PASSWORD,
-                database=config.DB_NAME,
+            self.conexao = mysql.connector.connect(
+                host=self.host, user=self.usuario, password=self.senha, database=self.banco
             )
         except mysql.connector.Error as erro:
             raise ErroBanco(f"Não foi possível conectar ao MySQL: {erro}") from erro
 
-    def consultar(self, sql, parametros=()):
-        """Executa um SELECT e devolve uma lista de dicionários."""
-        conexao = self.conectar()
+    def consultar(self, sql: str, params: tuple = ()) -> list[dict]:
+        """Executa um SELECT e devolve as linhas como dicionários."""
+        self.conectar()
         try:
-            cursor = conexao.cursor(dictionary=True)
-            cursor.execute(sql, parametros)
+            cursor = self.conexao.cursor(dictionary=True)
+            cursor.execute(sql, params)
             return cursor.fetchall()
         except mysql.connector.Error as erro:
             raise ErroBanco(f"Erro ao consultar o banco: {erro}") from erro
         finally:
-            conexao.close()
+            self.fechar()
 
-    def executar(self, sql, parametros=()):
-        """Executa INSERT, UPDATE ou DELETE e devolve o id gerado."""
-        conexao = self.conectar()
+    def executar(self, sql: str, params: tuple = ()) -> int:
+        """Executa INSERT, UPDATE ou DELETE e faz commit.
+
+        Devolve o id gerado (no INSERT) ou o número de linhas afetadas.
+        """
+        self.conectar()
         try:
-            cursor = conexao.cursor()
-            cursor.execute(sql, parametros)
-            conexao.commit()
-            return cursor.lastrowid
+            cursor = self.conexao.cursor()
+            cursor.execute(sql, params)
+            self.conexao.commit()
+            return cursor.lastrowid or cursor.rowcount
         except mysql.connector.Error as erro:
-            conexao.rollback()
+            self.conexao.rollback()
             raise ErroBanco(f"Erro ao gravar no banco: {erro}") from erro
         finally:
-            conexao.close()
+            self.fechar()
+
+    def fechar(self) -> None:
+        """Fecha a conexão aberta, se houver."""
+        if self.conexao is not None:
+            self.conexao.close()
+            self.conexao = None
