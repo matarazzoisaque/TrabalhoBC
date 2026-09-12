@@ -6,6 +6,7 @@ class TelaLivros {
     constructor(api) {
         this.api = api;
         this.mensagem = document.getElementById('mensagem');
+        this.mensagemFormulario = document.getElementById('mensagem-formulario');
         this.catalogList = document.getElementById('catalogList');
         this.formulario = document.getElementById('formulario-livro');
         this.modalBackdrop = document.getElementById('modalBackdrop');
@@ -19,8 +20,19 @@ class TelaLivros {
         this.filterPaginas = document.getElementById('filterPaginas');
         this.sortSelect = document.getElementById('sortSelect');
         this.themeToggle = document.getElementById('themeToggle');
+        this.viewBackdrop = document.getElementById('viewBackdrop');
+        this.viewTitle = document.getElementById('viewTitle');
+        this.viewSubtitle = document.getElementById('viewSubtitle');
+        this.viewAnoLancamento = document.getElementById('viewAnoLancamento');
+        this.viewDataCadastro = document.getElementById('viewDataCadastro');
+        this.viewCodigo = document.getElementById('viewCodigo');
+        this.viewExemplaresDisponiveis = document.getElementById('viewExemplaresDisponiveis');
+        this.closeView = document.getElementById('closeView');
+        this.closeViewBook = document.getElementById('closeViewBook');
         this.livros = [];
         this.livroEditandoId = null;
+        this.toastTimer = null;
+        this.toastHideTimer = null;
     }
 
     iniciar() {
@@ -32,17 +44,18 @@ class TelaLivros {
     }
 
     aplicarTemaSalvo() {
-        const saved = localStorage.getItem('biblioteca-theme') || 'light';
-        document.body.dataset.theme = saved;
-        this.atualizarTemaVisual(saved);
+        const saved = document.documentElement.dataset.theme || localStorage.getItem('biblioteca-theme') || 'light';
+        const tema = saved === 'dark' ? 'dark' : 'light';
+        document.documentElement.dataset.theme = tema;
+        this.atualizarTemaVisual(tema);
     }
 
     configurarTema() {
         if (!this.themeToggle) return;
 
         this.themeToggle.addEventListener('click', () => {
-            const proximoTema = document.body.dataset.theme === 'light' ? 'dark' : 'light';
-            document.body.dataset.theme = proximoTema;
+            const proximoTema = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+            document.documentElement.dataset.theme = proximoTema;
             localStorage.setItem('biblioteca-theme', proximoTema);
             this.atualizarTemaVisual(proximoTema);
         });
@@ -87,10 +100,6 @@ class TelaLivros {
         if (!this.formulario) return;
 
         this.formulario.addEventListener('submit', (evento) => this.salvar(evento));
-        this.formulario.addEventListener('reset', () => {
-            this.livroEditandoId = null;
-            this.exibirMensagem('Formulário limpo.');
-        });
 
         if (this.closeModal) {
             this.closeModal.addEventListener('click', () => this.fecharModal());
@@ -107,10 +116,25 @@ class TelaLivros {
                 }
             });
         }
+
+        if (this.closeView) {
+            this.closeView.addEventListener('click', () => this.fecharVisualizacaoLivro());
+        }
+
+        if (this.closeViewBook) {
+            this.closeViewBook.addEventListener('click', () => this.fecharVisualizacaoLivro());
+        }
+
+        if (this.viewBackdrop) {
+            this.viewBackdrop.addEventListener('click', (evento) => {
+                if (evento.target === this.viewBackdrop) {
+                    this.fecharVisualizacaoLivro();
+                }
+            });
+        }
     }
 
     async carregarLivros() {
-        this.exibirMensagem('Carregando livros...');
         try {
             this.livros = await this.api.listarLivros();
             this.atualizarFiltros(this.livros);
@@ -259,8 +283,6 @@ class TelaLivros {
             item.append(esquerda, genero, paginas, lancamento, cadastro, actions);
             this.catalogList.appendChild(item);
         }
-
-        this.exibirMensagem(`${livros.length} livro(s) encontrado(s).`);
     }
 
     criarBotaoAcao(icone, titulo, tipo) {
@@ -283,6 +305,7 @@ class TelaLivros {
         this.livroEditandoId = null;
         this.modalTitle.textContent = 'Cadastrar livro';
         this.formulario.reset();
+        this.formulario.data_cadastro.value = new Date().toISOString().slice(0, 10);
         if (this.modalBackdrop) {
             this.modalBackdrop.classList.add('open');
         }
@@ -298,15 +321,48 @@ class TelaLivros {
         this.livroEditandoId = null;
     }
 
-    visualizarLivro(livro) {
-        this.modalTitle.textContent = livro.titulo;
-        this.preencherFormulario(livro);
-        this.formulario.querySelector('button[type="submit"]').textContent = 'Fechar';
-        this.formulario.querySelector('button[type="submit"]').disabled = true;
-        this.formulario.querySelector('#cancelForm').textContent = 'Voltar';
-        if (this.modalBackdrop) {
-            this.modalBackdrop.classList.add('open');
+    fecharVisualizacaoLivro() {
+        if (this.viewBackdrop) {
+            this.viewBackdrop.classList.remove('open');
         }
+    }
+
+    visualizarLivro(livro) {
+        this.fecharModal();
+
+        if (this.viewTitle) this.viewTitle.textContent = livro.titulo || 'Livro';
+        if (this.viewSubtitle) this.viewSubtitle.textContent = livro.autor || 'Autor desconhecido';
+        if (this.viewAnoLancamento) this.viewAnoLancamento.textContent = this.formatarAnoLancamento(livro.data_lancamento || livro.data_cadastro);
+        if (this.viewDataCadastro) this.viewDataCadastro.textContent = this.formatarData(livro.data_cadastro);
+        if (this.viewCodigo) this.viewCodigo.textContent = livro.id_livro || 'Sem código';
+
+        // MOCK: contagem de exemplares em memória, deve ser substituída
+        // pela contagem real vinda da API de exemplares quando existir.
+        const mock = this.calcularMockExemplaresDisponiveis(livro.id_livro);
+        if (this.viewExemplaresDisponiveis) {
+            this.viewExemplaresDisponiveis.textContent = `${mock.disponiveis} de ${mock.total} exemplares disponíveis`;
+        }
+
+        if (this.viewBackdrop) {
+            this.viewBackdrop.classList.add('open');
+        }
+    }
+
+    formatarAnoLancamento(data) {
+        if (!data) return 'Sem data';
+        const date = new Date(`${data}T00:00:00`);
+        if (Number.isNaN(date.getTime())) return data;
+        return new Intl.DateTimeFormat('pt-BR', { year: 'numeric' }).format(date);
+    }
+
+    calcularMockExemplaresDisponiveis(idLivro) {
+        const id = Number(idLivro) || 1;
+        const total = 1 + (id % 6);
+        const disponiveis = (id * 2) % (total + 1);
+        return {
+            total,
+            disponiveis
+        };
     }
 
     editarLivro(livro) {
@@ -325,7 +381,7 @@ class TelaLivros {
         this.formulario.genero.value = livro.genero || '';
         this.formulario.paginas.value = livro.paginas || '';
         this.formulario.data_lancamento.value = livro.data_lancamento || livro.data_cadastro || '';
-        this.formulario.data_cadastro.value = livro.data_cadastro || '';
+        this.formulario.data_cadastro.value = livro.data_cadastro || new Date().toISOString().slice(0, 10);
     }
 
     async salvar(evento) {
@@ -354,17 +410,20 @@ class TelaLivros {
 
         try {
             let salvo;
+            let textoSucesso = '';
+
             if (this.livroEditandoId) {
                 salvo = await this.api.atualizarLivro(this.livroEditandoId, livro);
-                this.exibirMensagem(`Livro "${salvo.titulo}" atualizado.`, 'sucesso');
+                textoSucesso = `Livro "${salvo.titulo}" atualizado.`;
             } else {
                 salvo = await this.api.cadastrarLivro(livro);
-                this.exibirMensagem(`Livro "${salvo.titulo}" cadastrado com sucesso.`, 'sucesso');
+                textoSucesso = `Livro "${salvo.titulo}" cadastrado com sucesso.`;
             }
 
             this.formulario.reset();
             this.fecharModal();
             await this.carregarLivros();
+            this.exibirMensagem(textoSucesso, 'sucesso');
         } catch (erro) {
             this.exibirMensagem(erro.message, 'erro');
         } finally {
@@ -387,13 +446,44 @@ class TelaLivros {
     }
 
     exibirMensagem(texto, tipo = '') {
-        if (!this.mensagem) return;
+        const classe = tipo ? `mensagem ${tipo}` : 'mensagem';
 
-        this.mensagem.textContent = texto;
-        this.mensagem.className = tipo ? `mensagem ${tipo}` : 'mensagem';
+        if (this.mensagem) {
+            this.mensagem.textContent = texto;
+            this.mensagem.className = classe;
+            this.mensagem.setAttribute('role', 'status');
+            this.mensagem.setAttribute('aria-live', 'polite');
+
+            if (tipo === 'sucesso') {
+                this.mensagem.classList.add('toast-visible');
+                clearTimeout(this.toastTimer);
+                clearTimeout(this.toastHideTimer);
+
+                this.toastTimer = setTimeout(() => {
+                    this.mensagem.classList.add('toast-leaving');
+                    this.mensagem.classList.remove('toast-visible');
+                }, 2600);
+
+                this.toastHideTimer = setTimeout(() => {
+                    this.mensagem.classList.remove('toast-visible', 'toast-leaving');
+                    this.mensagem.textContent = '';
+                    this.mensagem.className = 'mensagem';
+                }, 3400);
+            } else {
+                this.mensagem.classList.remove('toast-visible', 'toast-leaving');
+                clearTimeout(this.toastTimer);
+                clearTimeout(this.toastHideTimer);
+            }
+        }
+
+        if (this.mensagemFormulario) {
+            this.mensagemFormulario.textContent = texto;
+            this.mensagemFormulario.className = classe;
+        }
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    if (!document.getElementById('formulario-livro') || !document.getElementById('modalBackdrop')) return;
     new TelaLivros(new Api()).iniciar();
 });
