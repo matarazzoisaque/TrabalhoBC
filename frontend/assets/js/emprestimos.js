@@ -1,3 +1,9 @@
+/* Tela de empréstimos.
+ *
+ * O JavaScript cuida só da tela: tema, catálogo, popups e envio do que o
+ * usuário escolheu. As regras do empréstimo, a disponibilidade dos
+ * exemplares, a situação e a data de devolução são do back-end em Python. */
+
 class TelaEmprestimos {
     constructor(api) {
         this.api = api;
@@ -9,7 +15,6 @@ class TelaEmprestimos {
         this.modalConfirmacao = document.getElementById('modalConfirmacao');
         this.modalTitle = document.getElementById('modalTitle');
         this.confirmTitle = document.getElementById('confirmTitle');
-        this.confirmText = document.getElementById('confirmText');
         this.confirmLivro = document.getElementById('confirmLivro');
         this.confirmLeitor = document.getElementById('confirmLeitor');
         this.closeCadastro = document.getElementById('closeCadastro');
@@ -22,13 +27,8 @@ class TelaEmprestimos {
         this.themeToggle = document.getElementById('themeToggle');
         this.leitorSelect = document.getElementById('leitorSelect');
         this.exemplarSelect = document.getElementById('exemplarSelect');
-        this.dataEmprestimo = document.getElementById('data_emprestimo');
-        this.prazoDias = document.getElementById('prazo_dias');
-        this.leitores = [];
-        this.livros = [];
-        this.exemplares = [];
-        this.emprestimos = [];
         this.emprestimoConfirmando = null;
+        this.esperaBusca = null;
         this.toastTimer = null;
         this.toastHideTimer = null;
     }
@@ -75,7 +75,11 @@ class TelaEmprestimos {
         }
 
         if (this.searchInput) {
-            this.searchInput.addEventListener('input', () => this.aplicarFiltros());
+            // Espera o usuário parar de digitar antes de pedir ao servidor.
+            this.searchInput.addEventListener('input', () => {
+                clearTimeout(this.esperaBusca);
+                this.esperaBusca = setTimeout(() => this.carregarEmprestimos(), 300);
+            });
         }
     }
 
@@ -124,82 +128,55 @@ class TelaEmprestimos {
     }
 
     async carregarDados() {
+        await Promise.all([this.carregarOpcoes(), this.carregarEmprestimos()]);
+    }
+
+    /* Leitores e exemplares disponíveis para os selects; quem filtra os disponíveis é o servidor. */
+    async carregarOpcoes() {
         try {
-            /*
-             * Este mock de empréstimos precisa ser substituído pela API real
-             * quando o backend de empréstimos existir. Ele depende dos mocks
-             * compartilhados de leitores e exemplares em memória.
-             */
-            this.livros = await this.api.listarLivros();
-
-            this.leitores = [
-                { id_leitor: 1, nome: 'Ana Silva', email: 'ana.silva@email.com', telefone: '(11) 99999-1001', data_cadastro: '2026-09-01' },
-                { id_leitor: 2, nome: 'Bruno Costa', email: 'bruno.costa@email.com', telefone: '(11) 99999-1002', data_cadastro: '2026-09-02' }
-            ];
-
-            this.exemplares = [
-                { id_exemplar: 1, id_livro: 1, codigo: 'EX-001', status: 'DISPONÍVEL', localizacao: 'Prateleira A1' },
-                { id_exemplar: 2, id_livro: 2, codigo: 'EX-002', status: 'EMPRESTADO', localizacao: 'Prateleira B2' },
-                { id_exemplar: 3, id_livro: 3, codigo: 'EX-003', status: 'DISPONÍVEL', localizacao: 'Prateleira C1' }
-            ];
-
-            this.emprestimos = [
-                { id_emprestimo: 1, id_leitor: 1, id_exemplar: 2, data_emprestimo: '2026-09-12', prazo_dias: 7, data_prevista_devolucao: '2026-09-19', situacao: 'ATIVO' },
-                { id_emprestimo: 2, id_leitor: 2, id_exemplar: 3, data_emprestimo: '2026-09-10', prazo_dias: 14, data_prevista_devolucao: '2026-09-24', situacao: 'DEVOLVIDO' }
-            ];
-
-            this.popularSelectLeitores();
-            this.popularSelectExemplares();
-            this.aplicarFiltros();
+            const [leitores, exemplares] = await Promise.all([
+                this.api.listarLeitores(),
+                this.api.listarExemplares({ status: 'DISPONIVEL' })
+            ]);
+            this.popularSelectLeitores(leitores);
+            this.popularSelectExemplares(exemplares);
         } catch (erro) {
             this.exibirMensagem(erro.message, 'erro');
         }
     }
 
-    popularSelectLeitores() {
+    /* Pede ao servidor os empréstimos, já com leitor, livro e situação. */
+    async carregarEmprestimos() {
+        try {
+            const busca = this.searchInput ? this.searchInput.value : '';
+            const emprestimos = await this.api.listarEmprestimos({ busca });
+            this.desenharCatalogo(emprestimos);
+        } catch (erro) {
+            this.exibirMensagem(erro.message, 'erro');
+        }
+    }
+
+    popularSelectLeitores(leitores) {
         if (!this.leitorSelect) return;
 
         this.leitorSelect.replaceChildren();
         this.leitorSelect.appendChild(new Option('Selecione um leitor', ''));
 
-        for (const leitor of this.leitores) {
+        for (const leitor of leitores) {
             this.leitorSelect.appendChild(new Option(leitor.nome, String(leitor.id_leitor)));
         }
     }
 
-    popularSelectExemplares() {
+    popularSelectExemplares(exemplares) {
         if (!this.exemplarSelect) return;
 
         this.exemplarSelect.replaceChildren();
         this.exemplarSelect.appendChild(new Option('Selecione um exemplar', ''));
 
-        for (const exemplar of this.exemplares) {
-            if (exemplar.status === 'DISPONÍVEL') {
-                const livro = this.descreverLivro(exemplar.id_livro);
-                this.exemplarSelect.appendChild(new Option(`${exemplar.codigo} — ${livro}`, String(exemplar.id_exemplar)));
-            }
+        for (const exemplar of exemplares) {
+            const texto = `Exemplar ${exemplar.id_exemplar} — ${exemplar.titulo_livro}`;
+            this.exemplarSelect.appendChild(new Option(texto, String(exemplar.id_exemplar)));
         }
-    }
-
-    descreverLivro(id_livro) {
-        const livro = this.livros ? this.livros.find((item) => Number(item.id_livro) === Number(id_livro)) : null;
-        return livro ? livro.titulo : 'Exemplar sem livro cadastrado';
-    }
-
-    aplicarFiltros() {
-        if (!Array.isArray(this.emprestimos)) return;
-
-        const busca = (this.searchInput ? this.searchInput.value.trim().toLowerCase() : '');
-
-        const lista = this.emprestimos.filter((emprestimo) => {
-            const leitor = this.leitores.find((item) => Number(item.id_leitor) === Number(emprestimo.id_leitor));
-            const exemplar = this.exemplares.find((item) => Number(item.id_exemplar) === Number(emprestimo.id_exemplar));
-            const livro = exemplar ? this.descreverLivro(exemplar.id_livro) : '';
-            const buscaTexto = `${leitor ? leitor.nome : ''} ${livro}`.toLowerCase();
-            return !busca || buscaTexto.includes(busca);
-        });
-
-        this.desenharCatalogo(lista);
     }
 
     desenharCatalogo(emprestimos) {
@@ -212,33 +189,10 @@ class TelaEmprestimos {
             return;
         }
 
+        this.exibirMensagem('');
         for (const emprestimo of emprestimos) {
             const item = document.createElement('article');
-            item.className = 'catalog-item';
-
-            const leitor = this.leitores.find((item) => Number(item.id_leitor) === Number(emprestimo.id_leitor));
-            const exemplar = this.exemplares.find((item) => Number(item.id_exemplar) === Number(emprestimo.id_exemplar));
-            const livro = exemplar ? this.descreverLivro(exemplar.id_livro) : 'Exemplar sem livro cadastrado';
-
-            const colunaLeitor = document.createElement('div');
-            colunaLeitor.className = 'book-meta-column';
-            colunaLeitor.innerHTML = `<span class="book-label">LEITOR</span><span class="book-value">${leitor ? leitor.nome : 'Leitor não encontrado'}</span>`;
-
-            const colunaLivro = document.createElement('div');
-            colunaLivro.className = 'book-meta-column';
-            colunaLivro.innerHTML = `<span class="book-label">LIVRO</span><span class="book-value">${livro}</span>`;
-
-            const colunaData = document.createElement('div');
-            colunaData.className = 'book-meta-column';
-            colunaData.innerHTML = `<span class="book-label">DATA DO EMPRÉSTIMO</span><span class="book-value">${this.formatarData(emprestimo.data_emprestimo)}</span>`;
-
-            const colunaPrevisao = document.createElement('div');
-            colunaPrevisao.className = 'book-meta-column';
-            colunaPrevisao.innerHTML = `<span class="book-label">PREVISÃO DE DEVOLUÇÃO</span><span class="book-value">${this.formatarData(emprestimo.data_prevista_devolucao || this.calcularDataPrevista(emprestimo.data_emprestimo, emprestimo.prazo_dias || 7))}</span>`;
-
-            const colunaSituacao = document.createElement('div');
-            colunaSituacao.className = 'book-meta-column';
-            colunaSituacao.innerHTML = `<span class="book-label">SITUAÇÃO</span><span class="book-value">${emprestimo.situacao}</span>`;
+            item.className = 'catalog-item emprestimo-item';
 
             const actions = document.createElement('div');
             actions.className = 'book-actions';
@@ -249,9 +203,34 @@ class TelaEmprestimos {
                 actions.appendChild(devolucao);
             }
 
-            item.append(colunaLeitor, colunaLivro, colunaData, colunaPrevisao, colunaSituacao, actions);
+            item.append(
+                this.criarColuna('LEITOR', emprestimo.nome_leitor),
+                this.criarColuna('LIVRO', emprestimo.titulo_livro),
+                // Código do exemplar: diz qual cópia do livro foi emprestada.
+                this.criarColuna('CÓDIGO', emprestimo.id_exemplar),
+                this.criarColuna('DATA DO EMPRÉSTIMO', this.formatarData(emprestimo.data_emprestimo)),
+                this.criarColuna('SITUAÇÃO', emprestimo.situacao),
+                actions
+            );
             this.catalogList.appendChild(item);
         }
+    }
+
+    /* Monta uma coluna do card. Usa textContent: o conteúdo vem do usuário. */
+    criarColuna(rotulo, valor) {
+        const coluna = document.createElement('div');
+        coluna.className = 'book-meta-column';
+
+        const label = document.createElement('span');
+        label.className = 'book-label';
+        label.textContent = rotulo;
+
+        const value = document.createElement('span');
+        value.className = 'book-value';
+        value.textContent = valor;
+
+        coluna.append(label, value);
+        return coluna;
     }
 
     criarBotaoAcao(icone, titulo, tipo) {
@@ -259,7 +238,7 @@ class TelaEmprestimos {
         btn.type = 'button';
         btn.className = tipo === 'devolver' ? 'icon-button' : 'icon-button delete';
         btn.title = titulo;
-        btn.innerHTML = icone;
+        btn.textContent = icone;
         return btn;
     }
 
@@ -270,13 +249,21 @@ class TelaEmprestimos {
         return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
     }
 
-    abrirModalCadastro() {
+    /* Data de hoje no fuso do computador (toISOString usaria UTC e viraria o dia seguinte à noite). */
+    hojeISO() {
+        const hoje = new Date();
+        const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+        const dia = String(hoje.getDate()).padStart(2, '0');
+        return `${hoje.getFullYear()}-${mes}-${dia}`;
+    }
+
+    async abrirModalCadastro() {
         this.formulario.reset();
         this.modalTitle.textContent = 'Novo empréstimo';
-        this.formulario.data_emprestimo.value = new Date().toISOString().slice(0, 10);
-        this.formulario.prazo_dias.value = 7;
-        this.popularSelectLeitores();
-        this.popularSelectExemplares();
+        this.formulario.data_emprestimo.value = this.hojeISO();
+
+        // Atualiza os selects: um exemplar pode ter sido devolvido ou emprestado.
+        await this.carregarOpcoes();
 
         if (this.modalCadastro) {
             this.modalCadastro.classList.add('open');
@@ -293,59 +280,31 @@ class TelaEmprestimos {
         }
     }
 
+    /* Envia leitor, exemplar e data; as regras do empréstimo ficam no servidor. */
     async salvar(evento) {
         evento.preventDefault();
         if (!this.formulario) return;
 
-        const leitorId = this.formulario.leitorSelect.value;
-        const exemplarId = this.formulario.exemplarSelect.value;
-        const dataEmprestimo = this.formulario.data_emprestimo.value;
-        const prazoDias = Number(this.formulario.prazo_dias.value);
-
-        if (!leitorId || !exemplarId || !dataEmprestimo || !Number.isFinite(prazoDias) || prazoDias < 1) {
-            this.exibirMensagem('Preencha leitor, exemplar, data e prazo válido.', 'erro');
-            return;
-        }
-
-        const leitor = this.leitores.find((item) => Number(item.id_leitor) === Number(leitorId));
-        const exemplar = this.exemplares.find((item) => Number(item.id_exemplar) === Number(exemplarId));
-
-        if (!leitor || !exemplar || exemplar.status !== 'DISPONÍVEL') {
-            this.exibirMensagem('Exemplar selecionado inválido.', 'erro');
-            return;
-        }
-
-        const novoEmprestimo = {
-            id_emprestimo: this.proximoCodigoEmprestimo(),
-            id_leitor: Number(leitorId),
-            id_exemplar: Number(exemplarId),
-            data_emprestimo: dataEmprestimo,
-            prazo_dias: prazoDias,
-            data_prevista_devolucao: this.calcularDataPrevista(dataEmprestimo, prazoDias),
-            situacao: 'ATIVO'
+        const botao = this.formulario.querySelector('button[type="submit"]');
+        const emprestimo = {
+            id_leitor: this.formulario.leitorSelect.value,
+            id_exemplar: this.formulario.exemplarSelect.value,
+            data_emprestimo: this.formulario.data_emprestimo.value
         };
 
-        this.emprestimos.push(novoEmprestimo);
-        exemplar.status = 'EMPRESTADO';
+        botao.disabled = true;
+        this.exibirMensagem('Salvando...');
 
-        this.formulario.reset();
-        this.fecharModalCadastro();
-        this.popularSelectExemplares();
-        this.aplicarFiltros();
-        this.exibirMensagem('Empréstimo registrado.', 'sucesso');
-    }
-
-    proximoCodigoEmprestimo() {
-        const maior = this.emprestimos.reduce((maiorId, emprestimo) => Math.max(maiorId, Number(emprestimo.id_emprestimo) || 0), 0);
-        return maior + 1;
-    }
-
-    calcularDataPrevista(dataEmprestimo, prazoDias) {
-        if (!dataEmprestimo) return '';
-        const data = new Date(`${dataEmprestimo}T00:00:00`);
-        if (Number.isNaN(data.getTime())) return '';
-        data.setDate(data.getDate() + Number(prazoDias || 7));
-        return data.toISOString().slice(0, 10);
+        try {
+            await this.api.registrarEmprestimo(emprestimo);
+            this.fecharModalCadastro();
+            await this.carregarDados();
+            this.exibirMensagem('Empréstimo registrado.', 'sucesso');
+        } catch (erro) {
+            this.exibirMensagem(erro.message, 'erro');
+        } finally {
+            botao.disabled = false;
+        }
     }
 
     abrirConfirmacaoDevolucao(emprestimo) {
@@ -353,21 +312,14 @@ class TelaEmprestimos {
 
         this.emprestimoConfirmando = emprestimo;
 
-        const leitor = this.leitores.find((item) => Number(item.id_leitor) === Number(emprestimo.id_leitor));
-        const exemplar = this.exemplares.find((item) => Number(item.id_exemplar) === Number(emprestimo.id_exemplar));
-        const livro = exemplar ? this.descreverLivro(exemplar.id_livro) : 'Livro sem título';
-
         if (this.confirmTitle) {
             this.confirmTitle.textContent = 'Registrar devolução';
         }
         if (this.confirmLivro) {
-            this.confirmLivro.textContent = livro;
+            this.confirmLivro.textContent = emprestimo.titulo_livro;
         }
         if (this.confirmLeitor) {
-            this.confirmLeitor.textContent = leitor ? leitor.nome : 'Leitor não encontrado';
-        }
-        if (this.confirmText) {
-            this.confirmText.innerHTML = `Confirma a devolução de '<span id="confirmLivro">${livro}</span>' por <span id="confirmLeitor">${leitor ? leitor.nome : 'Leitor não encontrado'}</span>?`;
+            this.confirmLeitor.textContent = emprestimo.nome_leitor;
         }
         if (this.confirmDelete) {
             this.confirmDelete.textContent = 'Confirmar devolução';
@@ -385,27 +337,60 @@ class TelaEmprestimos {
         this.emprestimoConfirmando = null;
     }
 
-    confirmarDevolucao() {
-        if (!this.emprestimoConfirmando || !this.emprestimoConfirmando.id_emprestimo) return;
+    async confirmarDevolucao() {
+        if (!this.emprestimoConfirmando) return;
 
-        const alvo = this.emprestimos.find((item) => Number(item.id_emprestimo) === Number(this.emprestimoConfirmando.id_emprestimo));
-        const exemplar = this.exemplares.find((item) => Number(item.id_exemplar) === Number(this.emprestimoConfirmando.id_exemplar));
-
-        if (alvo && exemplar) {
-            alvo.situacao = 'DEVOLVIDO';
-            exemplar.status = 'DISPONÍVEL';
-
+        try {
+            await this.api.registrarDevolucao(this.emprestimoConfirmando.id_emprestimo);
             this.fecharModalConfirmacao();
-            this.popularSelectExemplares();
-            this.aplicarFiltros();
+            await this.carregarDados();
             this.exibirMensagem('Devolução registrada.', 'sucesso');
-        } else {
-            this.exibirMensagem('Empréstimo ou exemplar não encontrado.', 'erro');
+        } catch (erro) {
+            // O popup não tem espaço para mensagem: fecha e mostra o motivo na tela.
+            this.fecharModalConfirmacao();
+            this.exibirMensagem(erro.message, 'erro');
+        }
+    }
+
+    exibirMensagem(texto, tipo = '') {
+        const classe = tipo ? `mensagem ${tipo}` : 'mensagem';
+
+        if (this.mensagem) {
+            this.mensagem.textContent = texto;
+            this.mensagem.className = classe;
+            this.mensagem.setAttribute('role', 'status');
+            this.mensagem.setAttribute('aria-live', 'polite');
+
+            if (tipo === 'sucesso') {
+                this.mensagem.classList.add('toast-visible');
+                clearTimeout(this.toastTimer);
+                clearTimeout(this.toastHideTimer);
+
+                this.toastTimer = setTimeout(() => {
+                    this.mensagem.classList.add('toast-leaving');
+                    this.mensagem.classList.remove('toast-visible');
+                }, 2600);
+
+                this.toastHideTimer = setTimeout(() => {
+                    this.mensagem.classList.remove('toast-visible', 'toast-leaving');
+                    this.mensagem.textContent = '';
+                    this.mensagem.className = 'mensagem';
+                }, 3400);
+            } else {
+                this.mensagem.classList.remove('toast-visible', 'toast-leaving');
+                clearTimeout(this.toastTimer);
+                clearTimeout(this.toastHideTimer);
+            }
+        }
+
+        if (this.mensagemFormulario) {
+            this.mensagemFormulario.textContent = texto;
+            this.mensagemFormulario.className = classe;
         }
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    if (!document.getElementById('formulario-emprestimo') || !document.getElementById('modalCadastro') || !document.getElementById('modalConfirmacao')) return;
+    if (!document.getElementById('formulario-emprestimo')) return;
     new TelaEmprestimos(new Api()).iniciar();
 });

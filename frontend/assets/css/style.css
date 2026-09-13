@@ -1610,3 +1610,15 @@ body[data-theme="dark"] .button-danger {
     cursor: default;
     transform: none;
 }
+
+/* Card de empréstimo: leitor, livro, código do exemplar, data, situação e ações */
+
+.catalog-item.emprestimo-item {
+    grid-template-columns: minmax(160px, 1.4fr) minmax(180px, 1.8fr) minmax(90px, 0.7fr) minmax(130px, 1fr) minmax(110px, 1fr) auto;
+}
+
+@media (max-width: 900px) {
+    .catalog-item.emprestimo-item {
+        grid-template-columns: 1fr;
+    }
+}

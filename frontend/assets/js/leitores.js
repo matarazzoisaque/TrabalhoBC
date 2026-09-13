@@ -1,3 +1,9 @@
+/* Tela de leitores.
+ *
+ * O JavaScript cuida só da tela: tema, catálogo, popups e envio do que o
+ * usuário digitou. Validação, busca, ids e datas são feitos pelo back-end
+ * em Python. */
+
 class TelaLeitores {
     constructor(api) {
         this.api = api;
@@ -26,9 +32,9 @@ class TelaLeitores {
         this.cancelDelete = document.getElementById('cancelDelete');
         this.confirmDelete = document.getElementById('confirmDelete');
         this.confirmText = document.getElementById('confirmText');
-        this.leitores = [];
         this.leitorEditandoId = null;
         this.leitorExcluindo = null;
+        this.esperaBusca = null;
         this.toastTimer = null;
         this.toastHideTimer = null;
     }
@@ -76,7 +82,11 @@ class TelaLeitores {
         }
 
         if (this.searchInput) {
-            this.searchInput.addEventListener('input', () => this.aplicarFiltros());
+            // Espera o usuário parar de digitar antes de pedir ao servidor.
+            this.searchInput.addEventListener('input', () => {
+                clearTimeout(this.esperaBusca);
+                this.esperaBusca = setTimeout(() => this.carregarLeitores(), 300);
+            });
         }
     }
 
@@ -142,27 +152,15 @@ class TelaLeitores {
         }
     }
 
+    /* Pede ao servidor os leitores; a busca é feita no Python. */
     async carregarLeitores() {
         try {
-            this.leitores = await this.api.listarLeitores();
-            this.aplicarFiltros();
+            const busca = this.searchInput ? this.searchInput.value : '';
+            const leitores = await this.api.listarLeitores({ busca });
+            this.desenharCatalogo(leitores);
         } catch (erro) {
             this.exibirMensagem(erro.message, 'erro');
         }
-    }
-
-    aplicarFiltros() {
-        if (!Array.isArray(this.leitores)) return;
-
-        const busca = (this.searchInput ? this.searchInput.value.trim().toLowerCase() : '');
-
-        let lista = this.leitores.filter((leitor) => {
-            const buscaTexto = `${leitor.nome} ${leitor.email}`.toLowerCase();
-            const atendeBusca = !busca || buscaTexto.includes(busca);
-            return atendeBusca;
-        });
-
-        this.desenharCatalogo(lista);
     }
 
     desenharCatalogo(leitores) {
@@ -175,12 +173,13 @@ class TelaLeitores {
             return;
         }
 
+        this.exibirMensagem('');
         for (const leitor of leitores) {
-            const item = this.criarItem(leitor);
-            this.catalogList.appendChild(item);
+            this.catalogList.appendChild(this.criarItem(leitor));
         }
     }
 
+    /* Monta um card do catálogo. Usa textContent: o conteúdo vem do usuário. */
     criarItem(leitor) {
         const item = document.createElement('article');
         item.className = 'catalog-item leitor-item';
@@ -198,13 +197,8 @@ class TelaLeitores {
 
         esquerda.append(titulo, email);
 
-        const telefone = document.createElement('div');
-        telefone.className = 'book-meta-column';
-        telefone.innerHTML = `<span class="book-label">TELEFONE</span><span class="book-value">${leitor.telefone || 'Sem telefone'}</span>`;
-
-        const cadastro = document.createElement('div');
-        cadastro.className = 'book-meta-column';
-        cadastro.innerHTML = `<span class="book-label">DATA DE CADASTRO</span><span class="book-value">${this.formatarData(leitor.data_cadastro)}</span>`;
+        const telefone = this.criarColuna('TELEFONE', leitor.telefone || 'Sem telefone');
+        const cadastro = this.criarColuna('DATA DE CADASTRO', this.formatarData(leitor.data_cadastro));
 
         const actions = document.createElement('div');
         actions.className = 'book-actions';
@@ -222,12 +216,28 @@ class TelaLeitores {
         return item;
     }
 
+    criarColuna(rotulo, valor) {
+        const coluna = document.createElement('div');
+        coluna.className = 'book-meta-column';
+
+        const label = document.createElement('span');
+        label.className = 'book-label';
+        label.textContent = rotulo;
+
+        const value = document.createElement('span');
+        value.className = 'book-value';
+        value.textContent = valor;
+
+        coluna.append(label, value);
+        return coluna;
+    }
+
     criarBotaoAcao(icone, titulo, tipo) {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = tipo === 'delete' ? 'icon-button delete' : 'icon-button';
         btn.title = titulo;
-        btn.innerHTML = icone;
+        btn.textContent = icone;
         return btn;
     }
 
@@ -238,11 +248,19 @@ class TelaLeitores {
         return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
     }
 
+    /* Só para mostrar no formulário; a data gravada é definida pelo servidor. */
+    hojeISO() {
+        const hoje = new Date();
+        const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+        const dia = String(hoje.getDate()).padStart(2, '0');
+        return `${hoje.getFullYear()}-${mes}-${dia}`;
+    }
+
     abrirModalCadastro() {
         this.leitorEditandoId = null;
         this.modalTitle.textContent = 'Cadastrar leitor';
         this.formulario.reset();
-        this.formulario.data_cadastro.value = new Date().toISOString().slice(0, 10);
+        this.formulario.data_cadastro.value = this.hojeISO();
         if (this.modalCadastro) {
             this.modalCadastro.classList.add('open');
         }
@@ -307,59 +325,44 @@ class TelaLeitores {
         this.formulario.nome.value = leitor.nome || '';
         this.formulario.email.value = leitor.email || '';
         this.formulario.telefone.value = leitor.telefone || '';
-        this.formulario.data_cadastro.value = leitor.data_cadastro || new Date().toISOString().slice(0, 10);
+        this.formulario.data_cadastro.value = leitor.data_cadastro || '';
     }
 
+    /* Envia o que foi digitado; quem valida é o servidor. */
     async salvar(evento) {
         evento.preventDefault();
         if (!this.formulario) return;
 
         const botao = this.formulario.querySelector('button[type="submit"]');
-        if (!botao) return;
-
         const leitor = {
-            nome: this.formulario.nome.value.trim(),
-            email: this.formulario.email.value.trim(),
-            telefone: this.formulario.telefone.value.trim(),
-            data_cadastro: this.formulario.data_cadastro.value
+            nome: this.formulario.nome.value,
+            email: this.formulario.email.value,
+            telefone: this.formulario.telefone.value
         };
-
-        if (!leitor.nome || !leitor.telefone || !leitor.email || !this.validarEmail(leitor.email)) {
-            this.exibirMensagem('Preencha nome, e-mail válido e telefone para continuar.', 'erro');
-            return;
-        }
 
         botao.disabled = true;
         this.exibirMensagem('Salvando...');
 
         try {
-            let salvo;
-            let textoSucesso = '';
+            const editando = this.leitorEditandoId;
+            const salvo = editando
+                ? await this.api.atualizarLeitor(editando, leitor)
+                : await this.api.cadastrarLeitor(leitor);
 
-            if (this.leitorEditandoId) {
-                salvo = await this.api.atualizarLeitor(this.leitorEditandoId, leitor);
-                textoSucesso = `Leitor "${salvo.nome}" atualizado.`;
-            } else {
-                salvo = await this.api.cadastrarLeitor(leitor);
-                textoSucesso = `Leitor "${salvo.nome}" cadastrado com sucesso.`;
-            }
-
-            this.formulario.reset();
             this.fecharModalCadastro();
             await this.carregarLeitores();
-            this.exibirMensagem(textoSucesso, 'sucesso');
+            this.exibirMensagem(
+                editando ? `Leitor "${salvo.nome}" atualizado.` : `Leitor "${salvo.nome}" cadastrado com sucesso.`,
+                'sucesso'
+            );
         } catch (erro) {
             this.exibirMensagem(erro.message, 'erro');
         } finally {
-            if (botao) botao.disabled = false;
+            botao.disabled = false;
         }
     }
 
-    validarEmail(email) {
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    }
-
-    async excluirLeitor(leitor) {
+    excluirLeitor(leitor) {
         if (!leitor || !leitor.id_leitor) return;
 
         this.leitorExcluindo = leitor;
@@ -371,16 +374,16 @@ class TelaLeitores {
     }
 
     async confirmarExclusao() {
-        if (!this.leitorExcluindo || !this.leitorExcluindo.id_leitor) return;
+        if (!this.leitorExcluindo) return;
 
         try {
             const removido = await this.api.excluirLeitor(this.leitorExcluindo.id_leitor);
-            if (removido) {
-                this.exibirMensagem(`Leitor "${removido.nome}" removido.`, 'sucesso');
-                this.fecharModalConfirmacao();
-                await this.carregarLeitores();
-            }
+            this.fecharModalConfirmacao();
+            await this.carregarLeitores();
+            this.exibirMensagem(`Leitor "${removido.nome}" removido.`, 'sucesso');
         } catch (erro) {
+            // O popup não tem espaço para mensagem: fecha e mostra o motivo na tela.
+            this.fecharModalConfirmacao();
             this.exibirMensagem(erro.message, 'erro');
         }
     }
@@ -430,5 +433,7 @@ class TelaLeitores {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {    if (!document.getElementById('formulario-leitor') || !document.getElementById('modalVisualizacao') || !document.getElementById('modalConfirmacao')) return;    new TelaLeitores(new DadosSimulados()).iniciar();
+document.addEventListener('DOMContentLoaded', () => {
+    if (!document.getElementById('formulario-leitor')) return;
+    new TelaLeitores(new Api()).iniciar();
 });

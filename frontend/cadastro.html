@@ -79,8 +79,6 @@
                         <select id="sortSelect">
                             <option value="titulo-asc">Nome A–Z</option>
                             <option value="titulo-desc">Nome Z–A</option>
-                            <option value="paginas-asc">Páginas menor → maior</option>
-                            <option value="paginas-desc">Páginas maior → menor</option>
                             <option value="data-desc">Data de cadastro novo → antigo</option>
                             <option value="data-asc">Data de cadastro antigo → novo</option>
                             <option value="lancamento-desc">Ano de lançamento novo → antigo</option>
@@ -128,19 +126,21 @@
                     </div>
 
                     <div class="campo">
-                        <label for="paginas">Quantidade de páginas</label>
-                        <input type="number" id="paginas" name="paginas" min="1" max="2000" required>
-                    </div>
-
-                    <div class="campo">
-                        <label for="data_lancamento">Data de lançamento</label>
-                        <input type="date" id="data_lancamento" name="data_lancamento" required>
+                        <label for="ano_lancamento">Ano de lançamento</label>
+                        <input type="number" id="ano_lancamento" name="ano_lancamento" min="1450" required>
                     </div>
 
                     <div class="campo">
                         <label for="data_cadastro">Data de cadastro</label>
                         <input type="date" id="data_cadastro" name="data_cadastro" readonly>
                     </div>
+                </div>
+
+                <div class="campo">
+                    <label for="resumo">Resumo</label>
+                    <textarea id="resumo" name="resumo" rows="6" maxlength="1000" required
+                              aria-describedby="contador-resumo"></textarea>
+                    <span class="campo-contador" id="contador-resumo">0/1000 caracteres</span>
                 </div>
 
                 <div class="form-actions">
@@ -173,10 +173,6 @@
                     <div class="view-row">
                         <dt class="view-label">Código</dt>
                         <dd class="view-value" id="viewCodigo"></dd>
-                    </div>
-                    <div class="view-row">
-                        <dt class="view-label">Exemplares disponíveis</dt>
-                        <dd class="view-value" id="viewExemplaresDisponiveis"></dd>
                     </div>
                 </dl>
             </div>

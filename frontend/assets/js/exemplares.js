@@ -1,3 +1,12 @@
+/* Tela de exemplares.
+ *
+ * O JavaScript cuida só da tela: tema, catálogo, popups e envio do que o
+ * usuário escolheu. Validação, busca, ids e status são feitos pelo back-end
+ * em Python. */
+
+/* Como cada status aparece na tela. */
+const ROTULOS_STATUS = { DISPONIVEL: 'DISPONÍVEL', EMPRESTADO: 'EMPRESTADO' };
+
 class TelaExemplares {
     constructor(api) {
         this.api = api;
@@ -14,7 +23,6 @@ class TelaExemplares {
         this.searchInput = document.getElementById('searchInput');
         this.themeToggle = document.getElementById('themeToggle');
         this.livroSelect = document.getElementById('livroSelect');
-        this.quantidadeInput = document.getElementById('quantidade');
         this.closeConfirmacao = document.getElementById('closeConfirmacao');
         this.cancelDelete = document.getElementById('cancelDelete');
         this.confirmDelete = document.getElementById('confirmDelete');
@@ -28,9 +36,9 @@ class TelaExemplares {
         this.viewExemplarCodigo = document.getElementById('viewExemplarCodigo');
         this.viewExemplarGenero = document.getElementById('viewExemplarGenero');
         this.livros = [];
-        this.exemplares = [];
         this.exemplarEditandoId = null;
         this.exemplarExcluindo = null;
+        this.esperaBusca = null;
         this.toastTimer = null;
         this.toastHideTimer = null;
     }
@@ -77,7 +85,11 @@ class TelaExemplares {
         }
 
         if (this.searchInput) {
-            this.searchInput.addEventListener('input', () => this.aplicarFiltros());
+            // Espera o usuário parar de digitar antes de pedir ao servidor.
+            this.searchInput.addEventListener('input', () => {
+                clearTimeout(this.esperaBusca);
+                this.esperaBusca = setTimeout(() => this.carregarExemplares(), 300);
+            });
         }
     }
 
@@ -141,29 +153,26 @@ class TelaExemplares {
         }
     }
 
+    /* Livros para o select do formulário e a lista de exemplares. */
     async carregarDados() {
         try {
             this.livros = await this.api.listarLivros();
-            this.exemplares = this.getMockExemplares();
             this.popularSelectLivros();
-            this.aplicarFiltros();
         } catch (erro) {
             this.exibirMensagem(erro.message, 'erro');
         }
+        await this.carregarExemplares();
     }
 
-    getMockExemplares() {
-        const livro1 = this.livros.find((livro) => Number(livro.id_livro) === 1);
-        const livro2 = this.livros.find((livro) => Number(livro.id_livro) === 2);
-        const livro3 = this.livros.find((livro) => Number(livro.id_livro) === 3);
-        const livro4 = this.livros.find((livro) => Number(livro.id_livro) === 4);
-
-        return [
-            { id_exemplar: 1, id_livro: livro1 ? livro1.id_livro : 1, codigo: 'EX-001', status: 'DISPONÍVEL' },
-            { id_exemplar: 2, id_livro: livro2 ? livro2.id_livro : 2, codigo: 'EX-002', status: 'EMPRESTADO' },
-            { id_exemplar: 3, id_livro: livro3 ? livro3.id_livro : 3, codigo: 'EX-003', status: 'DISPONÍVEL' },
-            { id_exemplar: 4, id_livro: livro4 ? livro4.id_livro : 4, codigo: 'EX-004', status: 'EMPRESTADO' }
-        ];
+    /* Pede ao servidor os exemplares, já com o título do livro; a busca é feita no Python. */
+    async carregarExemplares() {
+        try {
+            const busca = this.searchInput ? this.searchInput.value : '';
+            const exemplares = await this.api.listarExemplares({ busca });
+            this.desenharCatalogo(exemplares);
+        } catch (erro) {
+            this.exibirMensagem(erro.message, 'erro');
+        }
     }
 
     popularSelectLivros() {
@@ -179,21 +188,6 @@ class TelaExemplares {
         }
     }
 
-    aplicarFiltros() {
-        if (!Array.isArray(this.exemplares)) return;
-
-        const busca = (this.searchInput ? this.searchInput.value.trim().toLowerCase() : '');
-
-        let lista = this.exemplares.filter((exemplar) => {
-            const livro = this.livros.find((item) => Number(item.id_livro) === Number(exemplar.id_livro));
-            const tituloLivro = livro ? livro.titulo : exemplar.livro || '';
-            const atendeBusca = !busca || tituloLivro.toLowerCase().includes(busca);
-            return atendeBusca;
-        });
-
-        this.desenharCatalogo(lista);
-    }
-
     desenharCatalogo(exemplares) {
         if (!this.catalogList) return;
 
@@ -204,18 +198,18 @@ class TelaExemplares {
             return;
         }
 
+        this.exibirMensagem('');
         for (const exemplar of exemplares) {
-            const livro = this.livros.find((item) => Number(item.id_livro) === Number(exemplar.id_livro));
             const card = document.createElement('article');
             card.className = 'catalog-item exemplar-card';
 
             const titulo = document.createElement('div');
             titulo.className = 'book-title';
-            titulo.textContent = livro ? livro.titulo : exemplar.livro || 'Livro desconhecido';
+            titulo.textContent = exemplar.titulo_livro || 'Livro desconhecido';
 
             const status = document.createElement('span');
-            status.className = exemplar.status === 'DISPONÍVEL' ? 'exemplar-status disponivel' : 'exemplar-status emprestado';
-            status.textContent = exemplar.status;
+            status.className = exemplar.status === 'DISPONIVEL' ? 'exemplar-status disponivel' : 'exemplar-status emprestado';
+            status.textContent = this.rotuloStatus(exemplar.status);
 
             const info = document.createElement('div');
             info.className = 'book-author';
@@ -238,12 +232,16 @@ class TelaExemplares {
         }
     }
 
+    rotuloStatus(status) {
+        return ROTULOS_STATUS[status] || status || 'SEM STATUS';
+    }
+
     criarBotaoAcao(icone, titulo, tipo) {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = tipo === 'delete' ? 'icon-button delete' : 'icon-button';
         btn.title = titulo;
-        btn.innerHTML = icone;
+        btn.textContent = icone;
         return btn;
     }
 
@@ -252,19 +250,19 @@ class TelaExemplares {
 
         const livro = this.livros.find((item) => Number(item.id_livro) === Number(exemplar.id_livro));
         if (this.viewExemplarTitle) {
-            this.viewExemplarTitle.textContent = livro ? livro.titulo : exemplar.livro || 'Livro desconhecido';
+            this.viewExemplarTitle.textContent = exemplar.titulo_livro || 'Livro desconhecido';
         }
         if (this.viewExemplarAutor) {
-            this.viewExemplarAutor.textContent = livro ? livro.autor || 'Autor desconhecido' : 'Autor desconhecido';
+            this.viewExemplarAutor.textContent = livro ? livro.autor : 'Autor desconhecido';
         }
         if (this.viewExemplarStatus) {
-            this.viewExemplarStatus.textContent = exemplar.status || 'SEM STATUS';
+            this.viewExemplarStatus.textContent = this.rotuloStatus(exemplar.status);
         }
         if (this.viewExemplarCodigo) {
-            this.viewExemplarCodigo.textContent = exemplar.id_exemplar || 'Sem código';
+            this.viewExemplarCodigo.textContent = exemplar.id_exemplar;
         }
         if (this.viewExemplarGenero) {
-            this.viewExemplarGenero.textContent = livro ? livro.genero || 'Gênero não informado' : 'Gênero não informado';
+            this.viewExemplarGenero.textContent = livro ? livro.genero : 'Gênero não informado';
         }
 
         if (this.modalCadastro) {
@@ -286,9 +284,6 @@ class TelaExemplares {
         this.formulario.reset();
         this.modalTitle.textContent = 'Cadastrar exemplar';
         this.formulario.querySelector('button[type="submit"]').textContent = 'Cadastrar exemplar';
-        if (this.formulario.quantidade) {
-            this.formulario.quantidade.value = 1;
-        }
         this.popularSelectLivros();
         if (this.modalCadastro) {
             this.modalCadastro.classList.add('open');
@@ -312,113 +307,68 @@ class TelaExemplares {
         this.modalTitle.textContent = 'Editar exemplar';
         this.formulario.querySelector('button[type="submit"]').textContent = 'Salvar exemplar';
         this.popularSelectLivros();
-        if (this.formulario) {
-            this.formulario.livroSelect.value = String(exemplar.id_livro);
-            this.formulario.quantidade.value = 1;
-        }
+        this.formulario.livroSelect.value = String(exemplar.id_livro);
 
         if (this.modalCadastro) {
             this.modalCadastro.classList.add('open');
         }
     }
 
+    /* Envia o livro escolhido; quem valida e define o status é o servidor. */
     async salvar(evento) {
         evento.preventDefault();
         if (!this.formulario) return;
 
         const botao = this.formulario.querySelector('button[type="submit"]');
-        if (!botao) return;
-
-        const livroId = this.formulario.livroSelect.value;
-        const quantidade = Number(this.formulario.quantidade.value);
-
-        if (!livroId || !Number.isFinite(quantidade) || quantidade < 1) {
-            this.exibirMensagem('Selecione um livro e informe uma quantidade válida.', 'erro');
-            return;
-        }
-
-        const livro = this.livros.find((item) => Number(item.id_livro) === Number(livroId));
-        if (!livro) {
-            this.exibirMensagem('Livro inválido.', 'erro');
-            return;
-        }
+        const exemplar = { id_livro: this.formulario.livroSelect.value };
 
         botao.disabled = true;
         this.exibirMensagem('Salvando...');
 
         try {
-            let salvo;
-            let textoSucesso = '';
+            const editando = this.exemplarEditandoId;
+            const salvo = editando
+                ? await this.api.atualizarExemplar(editando, exemplar)
+                : await this.api.cadastrarExemplar(exemplar);
 
-            if (this.exemplarEditandoId) {
-                const alvo = this.exemplares.find((item) => Number(item.id_exemplar) === Number(this.exemplarEditandoId));
-                if (alvo) {
-                    alvo.id_livro = Number(livroId);
-                    alvo.status = 'DISPONÍVEL';
-                    alvo.livro = livro.titulo;
-                    alvo.codigo = this.gerarCodigoExemplar(Number(alvo.id_exemplar));
-                    salvo = { ...alvo };
-                    textoSucesso = `Exemplar do livro "${livro.titulo}" atualizado.`;
-                }
-            } else {
-                const novos = [];
-                for (let i = 0; i < quantidade; i += 1) {
-                    const idExemplar = this.proximoCodigoExemplar();
-                    const novo = {
-                        id_exemplar: idExemplar,
-                        id_livro: Number(livroId),
-                        codigo: this.gerarCodigoExemplar(idExemplar),
-                        livro: livro.titulo,
-                        status: 'DISPONÍVEL'
-                    };
-                    novos.push(novo);
-                }
-
-                this.exemplares.push(...novos);
-                salvo = novos[0] ? { ...novos[0] } : null;
-                textoSucesso = `${quantidade} exemplar(es) do livro "${livro.titulo}" cadastrado(s) com sucesso.`;
-            }
-
-            this.formulario.reset();
             this.fecharModalCadastro();
-            this.aplicarFiltros();
-            this.exibirMensagem(textoSucesso, 'sucesso');
+            await this.carregarExemplares();
+            this.exibirMensagem(
+                editando
+                    ? `Exemplar do livro "${salvo.titulo_livro}" atualizado.`
+                    : `Exemplar do livro "${salvo.titulo_livro}" cadastrado com sucesso.`,
+                'sucesso'
+            );
         } catch (erro) {
             this.exibirMensagem(erro.message, 'erro');
         } finally {
-            if (botao) botao.disabled = false;
+            botao.disabled = false;
         }
-    }
-
-    proximoCodigoExemplar() {
-        const maior = this.exemplares.reduce((maiorId, exemplar) => Math.max(maiorId, Number(exemplar.id_exemplar) || 0), 0);
-        return maior + 1;
-    }
-
-    gerarCodigoExemplar(idExemplar) {
-        return `EX-${String(Number(idExemplar)).padStart(3, '0')}`;
     }
 
     excluirExemplar(exemplar) {
         if (!exemplar || !exemplar.id_exemplar) return;
 
         this.exemplarExcluindo = exemplar;
-        this.confirmText.textContent = `Deseja excluir o exemplar do livro "${exemplar.livro || 'Livro'}"?`;
+        this.confirmText.textContent = `Deseja excluir o exemplar do livro "${exemplar.titulo_livro || 'Livro'}"?`;
 
         if (this.modalConfirmacao) {
             this.modalConfirmacao.classList.add('open');
         }
     }
 
-    confirmarExclusao() {
-        if (!this.exemplarExcluindo || !this.exemplarExcluindo.id_exemplar) return;
+    async confirmarExclusao() {
+        if (!this.exemplarExcluindo) return;
 
-        const indice = this.exemplares.findIndex((item) => Number(item.id_exemplar) === Number(this.exemplarExcluindo.id_exemplar));
-        if (indice >= 0) {
-            this.exemplares.splice(indice, 1);
-            this.exibirMensagem('Exemplar removido.', 'sucesso');
+        try {
+            await this.api.excluirExemplar(this.exemplarExcluindo.id_exemplar);
             this.fecharModalConfirmacao();
-            this.aplicarFiltros();
+            await this.carregarExemplares();
+            this.exibirMensagem('Exemplar removido.', 'sucesso');
+        } catch (erro) {
+            // O popup não tem espaço para mensagem: fecha e mostra o motivo na tela.
+            this.fecharModalConfirmacao();
+            this.exibirMensagem(erro.message, 'erro');
         }
     }
 
@@ -468,6 +418,6 @@ class TelaExemplares {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    if (!document.getElementById('formulario-exemplar') || !document.getElementById('modalCadastro') || !document.getElementById('viewBackdropExemplar')) return;
+    if (!document.getElementById('formulario-exemplar')) return;
     new TelaExemplares(new Api()).iniciar();
 });
