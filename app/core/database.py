@@ -7,6 +7,9 @@ livro.
 
 import mysql.connector
 
+# Mensagem de quando um comando da transação não encontra a linha esperada.
+DADOS_MUDARAM = "A operação não foi concluída porque os dados mudaram. Atualize a página e tente de novo."
+
 
 class ErroBanco(Exception):
     """Falha ao conectar ou ao executar um comando no MySQL."""
@@ -57,6 +60,34 @@ class Database:
         except mysql.connector.Error as erro:
             self.conexao.rollback()
             raise ErroBanco(f"Erro ao gravar no banco: {erro}") from erro
+        finally:
+            self.fechar()
+
+    def executar_transacao(self, comandos: list[tuple[str, tuple]]) -> list[int]:
+        """Executa vários comandos numa transação só: ou todos gravam, ou nenhum.
+
+        Cada comando precisa alterar pelo menos uma linha. Se algum não alterar
+        (por exemplo, o exemplar já foi emprestado por outra pessoa), tudo é
+        desfeito com rollback. Devolve, para cada comando, o id gerado (no
+        INSERT) ou o número de linhas afetadas.
+        """
+        self.conectar()
+        try:
+            cursor = self.conexao.cursor()
+            resultados = []
+            for sql, params in comandos:
+                cursor.execute(sql, params)
+                if cursor.rowcount < 1:
+                    raise ErroBanco(DADOS_MUDARAM)
+                resultados.append(cursor.lastrowid or cursor.rowcount)
+            self.conexao.commit()
+            return resultados
+        except mysql.connector.Error as erro:
+            self.conexao.rollback()
+            raise ErroBanco(f"Erro ao gravar no banco: {erro}") from erro
+        except ErroBanco:
+            self.conexao.rollback()
+            raise
         finally:
             self.fechar()
 

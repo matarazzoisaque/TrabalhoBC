@@ -13,6 +13,7 @@ from datetime import date
 from pydantic import ValidationError
 
 from app.models.livro import Livro
+from app.repositories.exemplar_repository import ExemplarRepositoryMemoria
 from app.repositories.livro_repository import LivroRepository, LivroRepositoryMemoria
 from app.services.livro_service import LivroService
 
@@ -31,6 +32,12 @@ ACERVO = [
      "ano_lancamento": 1881, "resumo": "Um defunto autor conta a própria vida."},
     VALIDO,
 ]
+
+
+def novo_livro_service():
+    """LivroService com os repositórios em memória."""
+    livros = LivroRepositoryMemoria()
+    return LivroService(livros, ExemplarRepositoryMemoria(livros))
 
 
 class TestLivro(unittest.TestCase):
@@ -95,7 +102,7 @@ class TestCadastro(unittest.TestCase):
     """Cadastro passando pelo service."""
 
     def setUp(self):
-        self.service = LivroService(LivroRepositoryMemoria())
+        self.service = novo_livro_service()
 
     def test_cadastrar_devolve_livro_com_id_e_data(self):
         ok, livro = self.service.cadastrar(VALIDO)
@@ -135,7 +142,7 @@ class TestListagem(unittest.TestCase):
     """Filtros e ordenação feitos no back-end."""
 
     def setUp(self):
-        self.service = LivroService(LivroRepositoryMemoria())
+        self.service = novo_livro_service()
         for dados in ACERVO:
             self.service.cadastrar(dados)
 
@@ -258,7 +265,7 @@ class TestEdicao(unittest.TestCase):
     """Edição de um livro já cadastrado."""
 
     def setUp(self):
-        self.service = LivroService(LivroRepositoryMemoria())
+        self.service = novo_livro_service()
         for dados in ACERVO:
             self.service.cadastrar(dados)
 
@@ -308,7 +315,7 @@ class TestExclusao(unittest.TestCase):
     """Exclusão de um livro do acervo."""
 
     def setUp(self):
-        self.service = LivroService(LivroRepositoryMemoria())
+        self.service = novo_livro_service()
         for dados in ACERVO:
             self.service.cadastrar(dados)
 
