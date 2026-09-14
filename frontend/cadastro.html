@@ -62,19 +62,6 @@
                     </label>
 
                     <label class="filter-label">
-                        <span>Ano de lançamento</span>
-                        <select id="filterPeriodo">
-                            <option value="">Todos</option>
-                            <option value="2020-hoje">2020 até hoje</option>
-                            <option value="2010-2019">2010–2019</option>
-                            <option value="2000-2009">2000–2009</option>
-                            <option value="1950-1999">1950–1999</option>
-                            <option value="1900-1949">1900–1949</option>
-                            <option value="ate-1899">Antes de 1900</option>
-                        </select>
-                    </label>
-
-                    <label class="filter-label">
                         <span>Ordenar</span>
                         <select id="sortSelect">
                             <option value="titulo-asc">Nome A–Z</option>
@@ -115,14 +102,33 @@
                         <input type="text" id="titulo" name="titulo" maxlength="200" required>
                     </div>
 
-                    <div class="campo">
-                        <label for="autor">Autor</label>
-                        <input type="text" id="autor" name="autor" maxlength="150" required>
+                    <div class="campo tag-input-container">
+                        <label for="input-autor">Autor(es) <span class="tag-required">*</span></label>
+                        <div class="tag-input-row">
+                            <input type="text" id="input-autor" placeholder="Digite o autor e pressione Enter ou +">
+                            <button type="button" class="button button-muted tag-add-btn" id="btn-add-autor" title="Adicionar autor">+</button>
+                        </div>
+                        <div class="tag-chips-wrapper" id="chips-autor"></div>
+                        <span class="campo-contador" id="contador-autor">0/150 caracteres</span>
                     </div>
 
-                    <div class="campo">
-                        <label for="genero">Gênero</label>
-                        <input type="text" id="genero" name="genero" maxlength="80" required>
+                    <div class="campo tag-input-container">
+                        <label for="input-genero">Gênero(s) <span class="tag-required">*</span></label>
+                        <div class="tag-input-row">
+                            <input type="text" id="input-genero" placeholder="Digite o gênero e pressione Enter ou +">
+                            <button type="button" class="button button-muted tag-add-btn" id="btn-add-genero" title="Adicionar gênero">+</button>
+                        </div>
+                        <div class="tag-chips-wrapper" id="chips-genero"></div>
+                        <span class="campo-contador" id="contador-genero">0/80 caracteres</span>
+                    </div>
+
+                    <div class="campo tag-input-container">
+                        <label for="input-responsavel">Responsável (opcional)</label>
+                        <div class="tag-input-row">
+                            <input type="text" id="input-responsavel" placeholder="Digite o responsável e pressione Enter ou +">
+                            <button type="button" class="button button-muted tag-add-btn" id="btn-add-responsavel" title="Adicionar responsável">+</button>
+                        </div>
+                        <div class="tag-chips-wrapper" id="chips-responsavel"></div>
                     </div>
 
                     <div class="campo">
@@ -174,6 +180,14 @@
                         <dt class="view-label">Código</dt>
                         <dd class="view-value" id="viewCodigo"></dd>
                     </div>
+                    <div class="view-row">
+                        <dt class="view-label">Gênero(s)</dt>
+                        <dd class="view-value" id="viewGenero"></dd>
+                    </div>
+                    <div class="view-row view-row-full">
+                        <dt class="view-label">Resumo</dt>
+                        <dd class="view-value" id="viewResumo"></dd>
+                    </div>
                 </dl>
             </div>
 
@@ -206,6 +220,7 @@
     </div>
 
     <script src="assets/js/api.js" defer></script>
+    <script src="assets/js/utils.js" defer></script>
     <script src="assets/js/livros.js" defer></script>
 </body>
 </html>

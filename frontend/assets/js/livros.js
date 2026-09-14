@@ -28,7 +28,6 @@ class TelaLivros {
         this.openForm = document.getElementById('openForm');
         this.searchInput = document.getElementById('searchInput');
         this.filterGenero = document.getElementById('filterGenero');
-        this.filterPeriodo = document.getElementById('filterPeriodo');
         this.sortSelect = document.getElementById('sortSelect');
         this.campoAno = document.getElementById('ano_lancamento');
         this.campoDataCadastro = document.getElementById('data_cadastro');
@@ -40,6 +39,28 @@ class TelaLivros {
         this.viewAnoLancamento = document.getElementById('viewAnoLancamento');
         this.viewDataCadastro = document.getElementById('viewDataCadastro');
         this.viewCodigo = document.getElementById('viewCodigo');
+        this.viewGenero = document.getElementById('viewGenero');
+        this.viewResumo = document.getElementById('viewResumo');
+
+        // Estado das tags/chips do formulário
+        this.autores = [];
+        this.generos = [];
+        this.responsaveis = []; // O campo 'responsavel' é mantido apenas em memória/sessão (o backend app/models/livro.py não possui este campo).
+
+        this.inputAutor = document.getElementById('input-autor');
+        this.btnAddAutor = document.getElementById('btn-add-autor');
+        this.chipsAutor = document.getElementById('chips-autor');
+        this.contadorAutor = document.getElementById('contador-autor');
+
+        this.inputGenero = document.getElementById('input-genero');
+        this.btnAddGenero = document.getElementById('btn-add-genero');
+        this.chipsGenero = document.getElementById('chips-genero');
+        this.contadorGenero = document.getElementById('contador-genero');
+
+        this.inputResponsavel = document.getElementById('input-responsavel');
+        this.btnAddResponsavel = document.getElementById('btn-add-responsavel');
+        this.chipsResponsavel = document.getElementById('chips-responsavel');
+
         this.botaoSalvar = null;
         this.livroEditandoId = null;
         this.livroExcluindo = null;
@@ -100,7 +121,7 @@ class TelaLivros {
             this.esperaBusca = setTimeout(() => this.carregarLivros(), 300);
         });
 
-        for (const filtro of [this.filterGenero, this.filterPeriodo, this.sortSelect]) {
+        for (const filtro of [this.filterGenero, this.sortSelect]) {
             filtro.addEventListener('change', () => this.carregarLivros());
         }
     }
@@ -117,6 +138,114 @@ class TelaLivros {
 
         this.campoAno.max = new Date().getFullYear();
         this.campoResumo.addEventListener('input', () => this.atualizarContadorResumo());
+
+        this.configurarCampoTag(this.inputAutor, this.btnAddAutor, 'autor');
+        this.configurarCampoTag(this.inputGenero, this.btnAddGenero, 'genero');
+        this.configurarCampoTag(this.inputResponsavel, this.btnAddResponsavel, 'responsavel');
+    }
+
+    configurarCampoTag(input, btn, tipo) {
+        if (!input) return;
+
+        input.addEventListener('keydown', (evento) => {
+            if (evento.key === 'Enter') {
+                evento.preventDefault();
+                this.adicionarTag(tipo);
+            }
+        });
+
+        if (btn) {
+            btn.addEventListener('click', () => this.adicionarTag(tipo));
+        }
+    }
+
+    adicionarTag(tipo) {
+        let input, array;
+        if (tipo === 'autor') {
+            input = this.inputAutor;
+            array = this.autores;
+        } else if (tipo === 'genero') {
+            input = this.inputGenero;
+            array = this.generos;
+        } else if (tipo === 'responsavel') {
+            input = this.inputResponsavel;
+            array = this.responsaveis;
+        }
+
+        if (!input || !array) return;
+
+        const valor = input.value.trim();
+        if (!valor) return;
+
+        array.push(valor);
+        input.value = '';
+        this.desenharTags(tipo);
+    }
+
+    removerTag(tipo, indice) {
+        let array;
+        if (tipo === 'autor') array = this.autores;
+        else if (tipo === 'genero') array = this.generos;
+        else if (tipo === 'responsavel') array = this.responsaveis;
+
+        if (!array) return;
+
+        array.splice(indice, 1);
+        this.desenharTags(tipo);
+    }
+
+    desenharTags(tipo) {
+        let container, array;
+        if (tipo === 'autor') {
+            container = this.chipsAutor;
+            array = this.autores;
+            this.atualizarContadorAutor();
+        } else if (tipo === 'genero') {
+            container = this.chipsGenero;
+            array = this.generos;
+            this.atualizarContadorGenero();
+        } else if (tipo === 'responsavel') {
+            container = this.chipsResponsavel;
+            array = this.responsaveis;
+        }
+
+        if (!container) return;
+
+        container.replaceChildren();
+
+        array.forEach((texto, index) => {
+            const chip = this.criarElemento('span', 'tag-chip');
+            const spanTexto = this.criarElemento('span', '', texto);
+
+            const btnRemove = this.criarElemento('button', 'tag-chip-remove', '×');
+            btnRemove.type = 'button';
+            btnRemove.title = 'Remover';
+            btnRemove.setAttribute('aria-label', `Remover ${texto}`);
+            btnRemove.addEventListener('click', () => this.removerTag(tipo, index));
+
+            chip.append(spanTexto, btnRemove);
+            container.appendChild(chip);
+        });
+    }
+
+    atualizarContadorAutor() {
+        if (!this.contadorAutor) return;
+        const total = this.autores.join('; ').length;
+        const limite = 150;
+        const atingiu = total > limite;
+
+        this.contadorAutor.textContent = `${total}/${limite} caracteres${atingiu ? ' — limite excedido!' : ''}`;
+        this.contadorAutor.classList.toggle('limite', atingiu);
+    }
+
+    atualizarContadorGenero() {
+        if (!this.contadorGenero) return;
+        const total = this.generos.join('; ').length;
+        const limite = 80;
+        const atingiu = total > limite;
+
+        this.contadorGenero.textContent = `${total}/${limite} caracteres${atingiu ? ' — limite excedido!' : ''}`;
+        this.contadorGenero.classList.toggle('limite', atingiu);
     }
 
     configurarVisualizacao() {
@@ -159,7 +288,6 @@ class TelaLivros {
         return {
             busca: this.searchInput.value,
             genero: this.filterGenero.value,
-            periodo: this.filterPeriodo.value,
             ordem: this.sortSelect.value
         };
     }
@@ -180,7 +308,7 @@ class TelaLivros {
         this.catalogList.replaceChildren();
 
         if (livros.length === 0) {
-            const filtrando = filtros.busca.trim() || filtros.genero || filtros.periodo;
+            const filtrando = filtros.busca.trim() || filtros.genero;
             this.exibirMensagem(filtrando
                 ? 'Nenhum livro encontrado com esses filtros.'
                 : 'Nenhum livro cadastrado ainda. Clique em "Cadastrar novo livro".');
@@ -195,10 +323,13 @@ class TelaLivros {
 
     /* Monta um card do catálogo. Usa textContent: o conteúdo vem do usuário. */
     criarItem(livro) {
+        const autorFormatado = formatarListaTruncada(livro.autor, formatarNomeABNT);
+        const generoFormatado = formatarListaTruncada(livro.genero);
+
         const principal = this.criarElemento('div', 'book-main');
         principal.append(
             this.criarElemento('div', 'book-title', livro.titulo),
-            this.criarElemento('div', 'book-author', livro.autor)
+            this.criarElemento('div', 'book-author', autorFormatado)
         );
 
         const ver = this.criarBotaoAcao('👁', 'Ver livro', 'view');
@@ -216,7 +347,7 @@ class TelaLivros {
         const item = this.criarElemento('article', 'catalog-item');
         item.append(
             principal,
-            this.criarColuna('GÊNERO', livro.genero),
+            this.criarColuna('GÊNERO', generoFormatado),
             this.criarColuna('ANO DE LANÇAMENTO', livro.ano_lancamento),
             this.criarColuna('DATA DE CADASTRO', this.formatarData(livro.data_cadastro)),
             acoes
@@ -260,6 +391,15 @@ class TelaLivros {
     abrirCadastro() {
         this.livroEditandoId = null;
         this.formulario.reset();
+        this.autores = [];
+        this.generos = [];
+        this.responsaveis = [];
+        if (this.inputAutor) this.inputAutor.value = '';
+        if (this.inputGenero) this.inputGenero.value = '';
+        if (this.inputResponsavel) this.inputResponsavel.value = '';
+        this.desenharTags('autor');
+        this.desenharTags('genero');
+        this.desenharTags('responsavel');
         this.campoDataCadastro.value = this.hojeISO();
         this.abrirPopupDoFormulario(
             'Cadastrar livro',
@@ -271,8 +411,21 @@ class TelaLivros {
     editarLivro(livro) {
         this.livroEditandoId = livro.id_livro;
         this.formulario.titulo.value = livro.titulo;
-        this.formulario.autor.value = livro.autor;
-        this.formulario.genero.value = livro.genero;
+
+        // Separa a string salva no backend por "; " para preencher as tags no formulário
+        this.autores = livro.autor ? livro.autor.split('; ').map(s => s.trim()).filter(Boolean) : [];
+        this.generos = livro.genero ? livro.genero.split('; ').map(s => s.trim()).filter(Boolean) : [];
+        // O backend (app/models/livro.py) não armazena o campo responsável; reinicia no formulário
+        this.responsaveis = [];
+
+        if (this.inputAutor) this.inputAutor.value = '';
+        if (this.inputGenero) this.inputGenero.value = '';
+        if (this.inputResponsavel) this.inputResponsavel.value = '';
+
+        this.desenharTags('autor');
+        this.desenharTags('genero');
+        this.desenharTags('responsavel');
+
         this.formulario.ano_lancamento.value = livro.ano_lancamento;
         this.formulario.resumo.value = livro.resumo;
         // A data de cadastro não muda na edição: mostra a do livro.
@@ -297,10 +450,21 @@ class TelaLivros {
     }
 
     dadosDoFormulario() {
+        if (this.inputAutor && this.inputAutor.value.trim()) {
+            this.adicionarTag('autor');
+        }
+        if (this.inputGenero && this.inputGenero.value.trim()) {
+            this.adicionarTag('genero');
+        }
+        if (this.inputResponsavel && this.inputResponsavel.value.trim()) {
+            this.adicionarTag('responsavel');
+        }
+
         return {
             titulo: this.formulario.titulo.value,
-            autor: this.formulario.autor.value,
-            genero: this.formulario.genero.value,
+            autor: this.autores.join('; '),
+            genero: this.generos.join('; '),
+            responsavel: this.responsaveis.join('; '),
             ano_lancamento: this.formulario.ano_lancamento.value,
             resumo: this.formulario.resumo.value
         };
@@ -323,15 +487,42 @@ class TelaLivros {
     fecharFormulario() {
         this.modalBackdrop.classList.remove('open');
         this.formulario.reset();
+        this.autores = [];
+        this.generos = [];
+        this.responsaveis = [];
+        if (this.inputAutor) this.inputAutor.value = '';
+        if (this.inputGenero) this.inputGenero.value = '';
+        if (this.inputResponsavel) this.inputResponsavel.value = '';
+        this.desenharTags('autor');
+        this.desenharTags('genero');
+        this.desenharTags('responsavel');
         this.livroEditandoId = null;
     }
 
     visualizarLivro(livro) {
         this.viewTitle.textContent = livro.titulo;
-        this.viewSubtitle.textContent = livro.autor;
+
+        const autoresLista = livro.autor
+            ? livro.autor.split('; ').map(s => s.trim()).filter(Boolean)
+            : [];
+        const autoresABNT = autoresLista.map(formatarNomeABNT).join('; ');
+        this.viewSubtitle.textContent = autoresABNT || 'Autor desconhecido';
+
         this.viewAnoLancamento.textContent = livro.ano_lancamento;
         this.viewDataCadastro.textContent = this.formatarData(livro.data_cadastro);
         this.viewCodigo.textContent = livro.id_livro;
+
+        if (this.viewGenero) {
+            const generosLista = livro.genero
+                ? livro.genero.split('; ').map(s => s.trim()).filter(Boolean)
+                : [];
+            this.viewGenero.textContent = generosLista.join(', ') || 'Não informado';
+        }
+
+        if (this.viewResumo) {
+            this.viewResumo.textContent = livro.resumo || 'Sem resumo.';
+        }
+
         this.viewBackdrop.classList.add('open');
     }
 
@@ -391,15 +582,48 @@ class TelaLivros {
         evento.preventDefault();
 
         const livro = this.dadosDoFormulario();
+
+        // Validação de tags obrigatórias e limites de tamanho
+        if (this.autores.length === 0) {
+            this.exibirMensagem('Informe ao menos um autor.', 'erro', this.mensagemFormulario);
+            if (this.inputAutor) this.inputAutor.focus();
+            return;
+        }
+        if (livro.autor.length > 150) {
+            this.exibirMensagem('O campo Autor(es) excede o limite de 150 caracteres no total.', 'erro', this.mensagemFormulario);
+            return;
+        }
+
+        if (this.generos.length === 0) {
+            this.exibirMensagem('Informe ao menos um gênero.', 'erro', this.mensagemFormulario);
+            if (this.inputGenero) this.inputGenero.focus();
+            return;
+        }
+        if (livro.genero.length > 80) {
+            this.exibirMensagem('O campo Gênero(s) excede o limite de 80 caracteres no total.', 'erro', this.mensagemFormulario);
+            return;
+        }
+
         const editando = this.livroEditandoId;
+
+        // Objeto formatado para o back-end (Python app/models/livro.py).
+        // NOTA: O campo 'responsavel' é mantido apenas no estado local da sessão no front-end,
+        // pois o servidor Python atual não possui a coluna/propriedade 'responsavel' no banco/modelo.
+        const livroParaEnvio = {
+            titulo: livro.titulo,
+            autor: livro.autor,
+            genero: livro.genero,
+            ano_lancamento: livro.ano_lancamento,
+            resumo: livro.resumo
+        };
 
         this.botaoSalvar.disabled = true;
         this.exibirMensagem('Salvando...', '', this.mensagemFormulario);
 
         try {
             const salvo = editando
-                ? await this.api.atualizarLivro(editando, livro)
-                : await this.api.cadastrarLivro(livro);
+                ? await this.api.atualizarLivro(editando, livroParaEnvio)
+                : await this.api.cadastrarLivro(livroParaEnvio);
 
             this.fecharFormulario();
             await Promise.all([this.carregarOpcoesDeFiltro(), this.carregarLivros()]);
