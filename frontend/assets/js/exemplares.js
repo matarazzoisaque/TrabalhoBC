@@ -23,6 +23,8 @@ class TelaExemplares {
         this.searchInput = document.getElementById('searchInput');
         this.themeToggle = document.getElementById('themeToggle');
         this.livroSelect = document.getElementById('livroSelect');
+        this.campoQuantidade = document.getElementById('campoQuantidade');
+        this.inputQuantidade = document.getElementById('quantidade');
         this.closeConfirmacao = document.getElementById('closeConfirmacao');
         this.cancelDelete = document.getElementById('cancelDelete');
         this.confirmDelete = document.getElementById('confirmDelete');
@@ -198,8 +200,27 @@ class TelaExemplares {
             return;
         }
 
+        // Calcula quantos exemplares no total e quantos disponíveis por livro
+        const contagemPorLivro = {};
+        for (const ex of exemplares) {
+            const idLivro = ex.id_livro;
+            if (!contagemPorLivro[idLivro]) {
+                contagemPorLivro[idLivro] = { total: 0, disponiveis: 0 };
+            }
+            contagemPorLivro[idLivro].total += 1;
+            if (ex.status === 'DISPONIVEL') {
+                contagemPorLivro[idLivro].disponiveis += 1;
+            }
+        }
+
         this.exibirMensagem('');
         for (const exemplar of exemplares) {
+            const livro = Array.isArray(this.livros)
+                ? this.livros.find((item) => Number(item.id_livro) === Number(exemplar.id_livro))
+                : null;
+            const autorFormatado = livro ? formatarListaTruncada(livro.autor, formatarNomeABNT) : '';
+            const stats = contagemPorLivro[exemplar.id_livro] || { total: 0, disponiveis: 0 };
+
             const card = document.createElement('article');
             card.className = 'catalog-item exemplar-card';
 
@@ -207,13 +228,23 @@ class TelaExemplares {
             titulo.className = 'book-title';
             titulo.textContent = exemplar.titulo_livro || 'Livro desconhecido';
 
+            const contagemSpan = document.createElement('span');
+            contagemSpan.className = 'exemplar-disponiveis-tag';
+            contagemSpan.textContent = `${stats.disponiveis} de ${stats.total} disponíveis`;
+
+            const tituloContainer = document.createElement('div');
+            tituloContainer.className = 'exemplar-title-block';
+            tituloContainer.append(titulo, contagemSpan);
+
             const status = document.createElement('span');
             status.className = exemplar.status === 'DISPONIVEL' ? 'exemplar-status disponivel' : 'exemplar-status emprestado';
             status.textContent = this.rotuloStatus(exemplar.status);
 
             const info = document.createElement('div');
             info.className = 'book-author';
-            info.textContent = `Código: ${exemplar.id_exemplar}`;
+            info.textContent = autorFormatado
+                ? `${autorFormatado} • Código: ${exemplar.id_exemplar}`
+                : `Código: ${exemplar.id_exemplar}`;
 
             const actions = document.createElement('div');
             actions.className = 'book-actions';
@@ -227,7 +258,7 @@ class TelaExemplares {
             del.addEventListener('click', () => this.excluirExemplar(exemplar));
 
             actions.append(view, edit, del);
-            card.append(titulo, status, info, actions);
+            card.append(tituloContainer, status, info, actions);
             this.catalogList.appendChild(card);
         }
     }
@@ -248,21 +279,39 @@ class TelaExemplares {
     visualizarExemplar(exemplar) {
         if (!exemplar) return;
 
-        const livro = this.livros.find((item) => Number(item.id_livro) === Number(exemplar.id_livro));
+        const livro = Array.isArray(this.livros)
+            ? this.livros.find((item) => Number(item.id_livro) === Number(exemplar.id_livro))
+            : null;
+
         if (this.viewExemplarTitle) {
             this.viewExemplarTitle.textContent = exemplar.titulo_livro || 'Livro desconhecido';
         }
+
         if (this.viewExemplarAutor) {
-            this.viewExemplarAutor.textContent = livro ? livro.autor : 'Autor desconhecido';
+            if (livro && livro.autor) {
+                const autoresLista = livro.autor.split('; ').map(s => s.trim()).filter(Boolean);
+                const autoresABNT = autoresLista.map(formatarNomeABNT).join('; ');
+                this.viewExemplarAutor.textContent = autoresABNT || 'Autor desconhecido';
+            } else {
+                this.viewExemplarAutor.textContent = 'Autor desconhecido';
+            }
         }
+
         if (this.viewExemplarStatus) {
             this.viewExemplarStatus.textContent = this.rotuloStatus(exemplar.status);
         }
+
         if (this.viewExemplarCodigo) {
             this.viewExemplarCodigo.textContent = exemplar.id_exemplar;
         }
+
         if (this.viewExemplarGenero) {
-            this.viewExemplarGenero.textContent = livro ? livro.genero : 'Gênero não informado';
+            if (livro && livro.genero) {
+                const generosLista = livro.genero.split('; ').map(s => s.trim()).filter(Boolean);
+                this.viewExemplarGenero.textContent = generosLista.join(', ') || 'Gênero não informado';
+            } else {
+                this.viewExemplarGenero.textContent = 'Gênero não informado';
+            }
         }
 
         if (this.modalCadastro) {
@@ -282,6 +331,8 @@ class TelaExemplares {
     abrirModalCadastro() {
         this.exemplarEditandoId = null;
         this.formulario.reset();
+        if (this.inputQuantidade) this.inputQuantidade.value = 1;
+        if (this.campoQuantidade) this.campoQuantidade.style.display = '';
         this.modalTitle.textContent = 'Cadastrar exemplar';
         this.formulario.querySelector('button[type="submit"]').textContent = 'Cadastrar exemplar';
         this.popularSelectLivros();
@@ -308,6 +359,7 @@ class TelaExemplares {
         this.formulario.querySelector('button[type="submit"]').textContent = 'Salvar exemplar';
         this.popularSelectLivros();
         this.formulario.livroSelect.value = String(exemplar.id_livro);
+        if (this.campoQuantidade) this.campoQuantidade.style.display = 'none';
 
         if (this.modalCadastro) {
             this.modalCadastro.classList.add('open');
@@ -320,25 +372,41 @@ class TelaExemplares {
         if (!this.formulario) return;
 
         const botao = this.formulario.querySelector('button[type="submit"]');
-        const exemplar = { id_livro: this.formulario.livroSelect.value };
+        const idLivro = this.formulario.livroSelect.value;
+        const quantidade = this.inputQuantidade ? Math.max(1, parseInt(this.inputQuantidade.value, 10) || 1) : 1;
+        const editando = this.exemplarEditandoId;
+
+        const livro = Array.isArray(this.livros)
+            ? this.livros.find((l) => Number(l.id_livro) === Number(idLivro))
+            : null;
+        const tituloLivro = livro ? livro.titulo : '';
 
         botao.disabled = true;
         this.exibirMensagem('Salvando...');
 
         try {
-            const editando = this.exemplarEditandoId;
-            const salvo = editando
-                ? await this.api.atualizarExemplar(editando, exemplar)
-                : await this.api.cadastrarExemplar(exemplar);
+            if (editando) {
+                const salvo = await this.api.atualizarExemplar(editando, { id_livro: idLivro });
+                this.fecharModalCadastro();
+                await this.carregarExemplares();
+                this.exibirMensagem(`Exemplar do livro "${salvo.titulo_livro || tituloLivro}" atualizado.`, 'sucesso');
+            } else if (quantidade > 1) {
+                const requisicoes = [];
+                for (let i = 0; i < quantidade; i++) {
+                    requisicoes.push(this.api.cadastrarExemplar({ id_livro: idLivro }));
+                }
+                await Promise.all(requisicoes);
 
-            this.fecharModalCadastro();
-            await this.carregarExemplares();
-            this.exibirMensagem(
-                editando
-                    ? `Exemplar do livro "${salvo.titulo_livro}" atualizado.`
-                    : `Exemplar do livro "${salvo.titulo_livro}" cadastrado com sucesso.`,
-                'sucesso'
-            );
+                this.fecharModalCadastro();
+                await this.carregarExemplares();
+                this.exibirMensagem(`${quantidade} exemplares de "${tituloLivro}" cadastrados com sucesso.`, 'sucesso');
+            } else {
+                const salvo = await this.api.cadastrarExemplar({ id_livro: idLivro });
+
+                this.fecharModalCadastro();
+                await this.carregarExemplares();
+                this.exibirMensagem(`Exemplar de "${salvo.titulo_livro || tituloLivro}" cadastrado com sucesso.`, 'sucesso');
+            }
         } catch (erro) {
             this.exibirMensagem(erro.message, 'erro');
         } finally {

@@ -27,6 +27,8 @@ class TelaEmprestimos {
         this.themeToggle = document.getElementById('themeToggle');
         this.leitorSelect = document.getElementById('leitorSelect');
         this.exemplarSelect = document.getElementById('exemplarSelect');
+        this.campoPrazo = document.getElementById('prazo_dias');
+        this.prazosLocais = {};
         this.emprestimoConfirmando = null;
         this.esperaBusca = null;
         this.toastTimer = null;
@@ -203,12 +205,16 @@ class TelaEmprestimos {
                 actions.appendChild(devolucao);
             }
 
+            const prazo = (this.prazosLocais && this.prazosLocais[emprestimo.id_emprestimo]) || (this.campoPrazo ? Number(this.campoPrazo.value) : 7);
+            const dataPrevisao = this.calcularPrevisaoDevolucao(emprestimo.data_emprestimo, prazo);
+
             item.append(
                 this.criarColuna('LEITOR', emprestimo.nome_leitor),
                 this.criarColuna('LIVRO', emprestimo.titulo_livro),
                 // Código do exemplar: diz qual cópia do livro foi emprestada.
                 this.criarColuna('CÓDIGO', emprestimo.id_exemplar),
                 this.criarColuna('DATA DO EMPRÉSTIMO', this.formatarData(emprestimo.data_emprestimo)),
+                this.criarColuna('PREVISÃO DE DEVOLUÇÃO', this.formatarData(dataPrevisao)),
                 this.criarColuna('SITUAÇÃO', emprestimo.situacao),
                 actions
             );
@@ -257,8 +263,20 @@ class TelaEmprestimos {
         return `${hoje.getFullYear()}-${mes}-${dia}`;
     }
 
+    calcularPrevisaoDevolucao(dataEmprestimoISO, prazoDias = 7) {
+        if (!dataEmprestimoISO) return '';
+        const date = new Date(`${dataEmprestimoISO}T00:00:00`);
+        if (Number.isNaN(date.getTime())) return dataEmprestimoISO;
+        date.setDate(date.getDate() + Number(prazoDias || 7));
+        const ano = date.getFullYear();
+        const mes = String(date.getMonth() + 1).padStart(2, '0');
+        const dia = String(date.getDate()).padStart(2, '0');
+        return `${ano}-${mes}-${dia}`;
+    }
+
     async abrirModalCadastro() {
         this.formulario.reset();
+        if (this.campoPrazo) this.campoPrazo.value = 7;
         this.modalTitle.textContent = 'Novo empréstimo';
         this.formulario.data_emprestimo.value = this.hojeISO();
 
@@ -286,6 +304,11 @@ class TelaEmprestimos {
         if (!this.formulario) return;
 
         const botao = this.formulario.querySelector('button[type="submit"]');
+
+        // NOTA DE MANUTENÇÃO: O back-end em Python (app/models/emprestimo.py) não possui campo para prazo de devolução ou previsão.
+        // O valor digitado no campo 'prazo_dias' é mantido apenas em memória/sessão local no front-end para exibir a 'Previsão de devolução'.
+        const prazoDias = this.campoPrazo ? Number(this.campoPrazo.value) || 7 : 7;
+
         const emprestimo = {
             id_leitor: this.formulario.leitorSelect.value,
             id_exemplar: this.formulario.exemplarSelect.value,
@@ -296,7 +319,12 @@ class TelaEmprestimos {
         this.exibirMensagem('Salvando...');
 
         try {
-            await this.api.registrarEmprestimo(emprestimo);
+            const resposta = await this.api.registrarEmprestimo(emprestimo);
+
+            if (resposta && resposta.id_emprestimo) {
+                this.prazosLocais[resposta.id_emprestimo] = prazoDias;
+            }
+
             this.fecharModalCadastro();
             await this.carregarDados();
             this.exibirMensagem('Empréstimo registrado.', 'sucesso');

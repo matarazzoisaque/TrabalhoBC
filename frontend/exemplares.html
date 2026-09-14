@@ -81,6 +81,11 @@
                             <option value="">Selecione um livro</option>
                         </select>
                     </div>
+
+                    <div class="campo" id="campoQuantidade">
+                        <label for="quantidade">Quantidade</label>
+                        <input type="number" id="quantidade" name="quantidade" min="1" max="100" value="1" required>
+                    </div>
                 </div>
 
                 <div class="form-actions">
@@ -143,6 +148,7 @@
     </div>
 
     <script src="assets/js/api.js" defer></script>
+    <script src="assets/js/utils.js" defer></script>
     <script src="assets/js/exemplares.js" defer></script>
 </body>
 </html>
