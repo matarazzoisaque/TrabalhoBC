@@ -2,7 +2,8 @@
  *
  * O JavaScript cuida só da tela: tema, catálogo, popups e envio do que o
  * usuário escolheu. As regras do empréstimo, a disponibilidade dos
- * exemplares, a situação e a data de devolução são do back-end em Python. */
+ * exemplares, a situação, a data prevista, os filtros e a ordenação são do
+ * back-end em Python. */
 
 class TelaEmprestimos {
     constructor(api) {
@@ -24,11 +25,27 @@ class TelaEmprestimos {
         this.confirmDelete = document.getElementById('confirmDelete');
         this.openForm = document.getElementById('openForm');
         this.searchInput = document.getElementById('searchInput');
+        this.filterSituacao = document.getElementById('filterSituacao');
+        this.sortSelect = document.getElementById('sortSelect');
         this.themeToggle = document.getElementById('themeToggle');
-        this.leitorSelect = document.getElementById('leitorSelect');
-        this.exemplarSelect = document.getElementById('exemplarSelect');
         this.campoPrazo = document.getElementById('prazo_dias');
-        this.prazosLocais = {};
+
+        // Campos de busca no lugar das listas suspensas; quem procura é o servidor.
+        this.campoLeitor = new CampoBusca({
+            input: document.getElementById('leitorBusca'),
+            lista: document.getElementById('leitorSugestoes'),
+            buscar: (texto) => this.api.listarLeitores({ busca: texto }),
+            descrever: (leitor) => `${leitor.nome} — ${leitor.email}`,
+            obterId: (leitor) => leitor.id_leitor
+        });
+        this.campoExemplar = new CampoBusca({
+            input: document.getElementById('exemplarBusca'),
+            lista: document.getElementById('exemplarSugestoes'),
+            buscar: (texto) => this.api.listarExemplares({ busca: texto, status: 'DISPONIVEL' }),
+            descrever: (exemplar) => `${exemplar.titulo_livro} — Código ${exemplar.id_exemplar}`,
+            obterId: (exemplar) => exemplar.id_exemplar
+        });
+
         this.emprestimoConfirmando = null;
         this.esperaBusca = null;
         this.toastTimer = null;
@@ -41,7 +58,7 @@ class TelaEmprestimos {
         this.configurarCatalogo();
         this.configurarCadastro();
         this.configurarConfirmacaoDevolucao();
-        this.carregarDados();
+        this.carregarEmprestimos();
     }
 
     aplicarTemaSalvo() {
@@ -82,6 +99,10 @@ class TelaEmprestimos {
                 clearTimeout(this.esperaBusca);
                 this.esperaBusca = setTimeout(() => this.carregarEmprestimos(), 300);
             });
+        }
+
+        for (const filtro of [this.filterSituacao, this.sortSelect]) {
+            if (filtro) filtro.addEventListener('change', () => this.carregarEmprestimos());
         }
     }
 
@@ -129,65 +150,35 @@ class TelaEmprestimos {
         }
     }
 
-    async carregarDados() {
-        await Promise.all([this.carregarOpcoes(), this.carregarEmprestimos()]);
+    filtrosAtuais() {
+        return {
+            busca: this.searchInput ? this.searchInput.value : '',
+            situacao: this.filterSituacao ? this.filterSituacao.value : '',
+            ordem: this.sortSelect ? this.sortSelect.value : ''
+        };
     }
 
-    /* Leitores e exemplares disponíveis para os selects; quem filtra os disponíveis é o servidor. */
-    async carregarOpcoes() {
-        try {
-            const [leitores, exemplares] = await Promise.all([
-                this.api.listarLeitores(),
-                this.api.listarExemplares({ status: 'DISPONIVEL' })
-            ]);
-            this.popularSelectLeitores(leitores);
-            this.popularSelectExemplares(exemplares);
-        } catch (erro) {
-            this.exibirMensagem(erro.message, 'erro');
-        }
-    }
-
-    /* Pede ao servidor os empréstimos, já com leitor, livro e situação. */
+    /* Pede ao servidor os empréstimos, já filtrados, ordenados e com leitor, livro e situação. */
     async carregarEmprestimos() {
         try {
-            const busca = this.searchInput ? this.searchInput.value : '';
-            const emprestimos = await this.api.listarEmprestimos({ busca });
-            this.desenharCatalogo(emprestimos);
+            const filtros = this.filtrosAtuais();
+            const emprestimos = await this.api.listarEmprestimos(filtros);
+            this.desenharCatalogo(emprestimos, filtros);
         } catch (erro) {
             this.exibirMensagem(erro.message, 'erro');
         }
     }
 
-    popularSelectLeitores(leitores) {
-        if (!this.leitorSelect) return;
-
-        this.leitorSelect.replaceChildren();
-        this.leitorSelect.appendChild(new Option('Selecione um leitor', ''));
-
-        for (const leitor of leitores) {
-            this.leitorSelect.appendChild(new Option(leitor.nome, String(leitor.id_leitor)));
-        }
-    }
-
-    popularSelectExemplares(exemplares) {
-        if (!this.exemplarSelect) return;
-
-        this.exemplarSelect.replaceChildren();
-        this.exemplarSelect.appendChild(new Option('Selecione um exemplar', ''));
-
-        for (const exemplar of exemplares) {
-            const texto = `Exemplar ${exemplar.id_exemplar} — ${exemplar.titulo_livro}`;
-            this.exemplarSelect.appendChild(new Option(texto, String(exemplar.id_exemplar)));
-        }
-    }
-
-    desenharCatalogo(emprestimos) {
+    desenharCatalogo(emprestimos, filtros) {
         if (!this.catalogList) return;
 
         this.catalogList.replaceChildren();
 
         if (!emprestimos || emprestimos.length === 0) {
-            this.exibirMensagem('Nenhum empréstimo encontrado.', 'erro');
+            const filtrando = filtros.busca.trim() || filtros.situacao;
+            this.exibirMensagem(filtrando
+                ? 'Nenhum empréstimo encontrado com esses filtros.'
+                : 'Nenhum empréstimo registrado ainda.', 'erro');
             return;
         }
 
@@ -205,16 +196,13 @@ class TelaEmprestimos {
                 actions.appendChild(devolucao);
             }
 
-            const prazo = (this.prazosLocais && this.prazosLocais[emprestimo.id_emprestimo]) || (this.campoPrazo ? Number(this.campoPrazo.value) : 7);
-            const dataPrevisao = this.calcularPrevisaoDevolucao(emprestimo.data_emprestimo, prazo);
-
             item.append(
                 this.criarColuna('LEITOR', emprestimo.nome_leitor),
                 this.criarColuna('LIVRO', emprestimo.titulo_livro),
                 // Código do exemplar: diz qual cópia do livro foi emprestada.
                 this.criarColuna('CÓDIGO', emprestimo.id_exemplar),
                 this.criarColuna('DATA DO EMPRÉSTIMO', this.formatarData(emprestimo.data_emprestimo)),
-                this.criarColuna('PREVISÃO DE DEVOLUÇÃO', this.formatarData(dataPrevisao)),
+                this.criarColuna('PREVISÃO DE DEVOLUÇÃO', this.formatarData(emprestimo.data_prevista_devolucao)),
                 this.criarColuna('SITUAÇÃO', emprestimo.situacao),
                 actions
             );
@@ -263,29 +251,19 @@ class TelaEmprestimos {
         return `${hoje.getFullYear()}-${mes}-${dia}`;
     }
 
-    calcularPrevisaoDevolucao(dataEmprestimoISO, prazoDias = 7) {
-        if (!dataEmprestimoISO) return '';
-        const date = new Date(`${dataEmprestimoISO}T00:00:00`);
-        if (Number.isNaN(date.getTime())) return dataEmprestimoISO;
-        date.setDate(date.getDate() + Number(prazoDias || 7));
-        const ano = date.getFullYear();
-        const mes = String(date.getMonth() + 1).padStart(2, '0');
-        const dia = String(date.getDate()).padStart(2, '0');
-        return `${ano}-${mes}-${dia}`;
-    }
-
-    async abrirModalCadastro() {
+    abrirModalCadastro() {
         this.formulario.reset();
+        this.campoLeitor.limpar();
+        this.campoExemplar.limpar();
         if (this.campoPrazo) this.campoPrazo.value = 7;
         this.modalTitle.textContent = 'Novo empréstimo';
         this.formulario.data_emprestimo.value = this.hojeISO();
 
-        // Atualiza os selects: um exemplar pode ter sido devolvido ou emprestado.
-        await this.carregarOpcoes();
-
         if (this.modalCadastro) {
             this.modalCadastro.classList.add('open');
         }
+        // Com o formulário aberto, limpa a mensagem da tela e a de dentro dele.
+        this.exibirMensagem('');
     }
 
     fecharModalCadastro() {
@@ -296,37 +274,31 @@ class TelaEmprestimos {
         if (this.formulario) {
             this.formulario.reset();
         }
+
+        this.campoLeitor.limpar();
+        this.campoExemplar.limpar();
     }
 
-    /* Envia leitor, exemplar e data; as regras do empréstimo ficam no servidor. */
+    /* Envia leitor, exemplar, data e prazo; as regras e a data prevista ficam no servidor. */
     async salvar(evento) {
         evento.preventDefault();
         if (!this.formulario) return;
 
         const botao = this.formulario.querySelector('button[type="submit"]');
-
-        // NOTA DE MANUTENÇÃO: O back-end em Python (app/models/emprestimo.py) não possui campo para prazo de devolução ou previsão.
-        // O valor digitado no campo 'prazo_dias' é mantido apenas em memória/sessão local no front-end para exibir a 'Previsão de devolução'.
-        const prazoDias = this.campoPrazo ? Number(this.campoPrazo.value) || 7 : 7;
-
         const emprestimo = {
-            id_leitor: this.formulario.leitorSelect.value,
-            id_exemplar: this.formulario.exemplarSelect.value,
-            data_emprestimo: this.formulario.data_emprestimo.value
+            id_leitor: this.campoLeitor.valor,
+            id_exemplar: this.campoExemplar.valor,
+            data_emprestimo: this.formulario.data_emprestimo.value,
+            prazo_dias: this.campoPrazo ? this.campoPrazo.value : ''
         };
 
         botao.disabled = true;
         this.exibirMensagem('Salvando...');
 
         try {
-            const resposta = await this.api.registrarEmprestimo(emprestimo);
-
-            if (resposta && resposta.id_emprestimo) {
-                this.prazosLocais[resposta.id_emprestimo] = prazoDias;
-            }
-
+            await this.api.registrarEmprestimo(emprestimo);
             this.fecharModalCadastro();
-            await this.carregarDados();
+            await this.carregarEmprestimos();
             this.exibirMensagem('Empréstimo registrado.', 'sucesso');
         } catch (erro) {
             this.exibirMensagem(erro.message, 'erro');
@@ -371,7 +343,7 @@ class TelaEmprestimos {
         try {
             await this.api.registrarDevolucao(this.emprestimoConfirmando.id_emprestimo);
             this.fecharModalConfirmacao();
-            await this.carregarDados();
+            await this.carregarEmprestimos();
             this.exibirMensagem('Devolução registrada.', 'sucesso');
         } catch (erro) {
             // O popup não tem espaço para mensagem: fecha e mostra o motivo na tela.
@@ -380,40 +352,39 @@ class TelaEmprestimos {
         }
     }
 
+    /* Mostra a mensagem num lugar só: dentro do formulário, se ele estiver aberto; senão, no aviso da tela. */
     exibirMensagem(texto, tipo = '') {
         const classe = tipo ? `mensagem ${tipo}` : 'mensagem';
-
-        if (this.mensagem) {
-            this.mensagem.textContent = texto;
-            this.mensagem.className = classe;
-            this.mensagem.setAttribute('role', 'status');
-            this.mensagem.setAttribute('aria-live', 'polite');
-
-            if (tipo === 'sucesso') {
-                this.mensagem.classList.add('toast-visible');
-                clearTimeout(this.toastTimer);
-                clearTimeout(this.toastHideTimer);
-
-                this.toastTimer = setTimeout(() => {
-                    this.mensagem.classList.add('toast-leaving');
-                    this.mensagem.classList.remove('toast-visible');
-                }, 2600);
-
-                this.toastHideTimer = setTimeout(() => {
-                    this.mensagem.classList.remove('toast-visible', 'toast-leaving');
-                    this.mensagem.textContent = '';
-                    this.mensagem.className = 'mensagem';
-                }, 3400);
-            } else {
-                this.mensagem.classList.remove('toast-visible', 'toast-leaving');
-                clearTimeout(this.toastTimer);
-                clearTimeout(this.toastHideTimer);
-            }
-        }
+        const formularioAberto = Boolean(this.modalCadastro && this.modalCadastro.classList.contains('open'));
 
         if (this.mensagemFormulario) {
-            this.mensagemFormulario.textContent = texto;
-            this.mensagemFormulario.className = classe;
+            this.mensagemFormulario.textContent = formularioAberto ? texto : '';
+            this.mensagemFormulario.className = `${formularioAberto ? classe : 'mensagem'} mensagem-formulario`;
+        }
+
+        if (!this.mensagem) return;
+
+        clearTimeout(this.toastTimer);
+        clearTimeout(this.toastHideTimer);
+        this.mensagem.classList.remove('toast-visible', 'toast-leaving');
+        this.mensagem.textContent = formularioAberto ? '' : texto;
+        this.mensagem.className = formularioAberto ? 'mensagem' : classe;
+        this.mensagem.setAttribute('role', 'status');
+        this.mensagem.setAttribute('aria-live', 'polite');
+
+        if (!formularioAberto && tipo === 'sucesso') {
+            this.mensagem.classList.add('toast-visible');
+
+            this.toastTimer = setTimeout(() => {
+                this.mensagem.classList.add('toast-leaving');
+                this.mensagem.classList.remove('toast-visible');
+            }, 2600);
+
+            this.toastHideTimer = setTimeout(() => {
+                this.mensagem.classList.remove('toast-visible', 'toast-leaving');
+                this.mensagem.textContent = '';
+                this.mensagem.className = 'mensagem';
+            }, 3400);
         }
     }
 }

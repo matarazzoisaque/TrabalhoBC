@@ -638,47 +638,39 @@ class TelaLivros {
         }
     }
 
+    /* Mostra a mensagem só no lugar pedido: no aviso da tela, no formulário ou no popup de exclusão. */
     exibirMensagem(texto, tipo = '', alvo = this.mensagem) {
         if (!alvo) return;
 
         const classe = tipo ? `mensagem ${tipo}` : 'mensagem';
 
-        if (this.mensagem) {
-            this.mensagem.textContent = texto;
-            this.mensagem.className = classe;
-            this.mensagem.setAttribute('role', 'status');
-            this.mensagem.setAttribute('aria-live', 'polite');
+        if (alvo !== this.mensagem) {
+            alvo.textContent = texto;
+            alvo.className = alvo === this.mensagemFormulario ? `${classe} mensagem-formulario` : classe;
+            return;
+        }
 
-            if (tipo === 'sucesso') {
-                this.mensagem.classList.add('toast-visible');
-                clearTimeout(this.toastTimer);
-                clearTimeout(this.toastHideTimer);
+        clearTimeout(this.toastTimer);
+        clearTimeout(this.toastHideTimer);
+        this.mensagem.classList.remove('toast-visible', 'toast-leaving');
+        this.mensagem.textContent = texto;
+        this.mensagem.className = classe;
+        this.mensagem.setAttribute('role', 'status');
+        this.mensagem.setAttribute('aria-live', 'polite');
 
-                this.toastTimer = setTimeout(() => {
-                    this.mensagem.classList.add('toast-leaving');
-                    this.mensagem.classList.remove('toast-visible');
-                }, 2600);
+        if (tipo === 'sucesso') {
+            this.mensagem.classList.add('toast-visible');
 
-                this.toastHideTimer = setTimeout(() => {
-                    this.mensagem.classList.remove('toast-visible', 'toast-leaving');
-                    this.mensagem.textContent = '';
-                    this.mensagem.className = 'mensagem';
-                }, 3400);
-            } else {
+            this.toastTimer = setTimeout(() => {
+                this.mensagem.classList.add('toast-leaving');
+                this.mensagem.classList.remove('toast-visible');
+            }, 2600);
+
+            this.toastHideTimer = setTimeout(() => {
                 this.mensagem.classList.remove('toast-visible', 'toast-leaving');
-                clearTimeout(this.toastTimer);
-                clearTimeout(this.toastHideTimer);
-            }
-        }
-
-        if (this.mensagemFormulario) {
-            this.mensagemFormulario.textContent = texto;
-            this.mensagemFormulario.className = classe;
-        }
-
-        if (this.mensagemExclusao) {
-            this.mensagemExclusao.textContent = texto;
-            this.mensagemExclusao.className = classe;
+                this.mensagem.textContent = '';
+                this.mensagem.className = 'mensagem';
+            }, 3400);
         }
     }
 }

@@ -395,40 +395,39 @@ class TelaLeitores {
         this.leitorExcluindo = null;
     }
 
+    /* Mostra a mensagem num lugar só: dentro do formulário, se ele estiver aberto; senão, no aviso da tela. */
     exibirMensagem(texto, tipo = '') {
         const classe = tipo ? `mensagem ${tipo}` : 'mensagem';
-
-        if (this.mensagem) {
-            this.mensagem.textContent = texto;
-            this.mensagem.className = classe;
-            this.mensagem.setAttribute('role', 'status');
-            this.mensagem.setAttribute('aria-live', 'polite');
-
-            if (tipo === 'sucesso') {
-                this.mensagem.classList.add('toast-visible');
-                clearTimeout(this.toastTimer);
-                clearTimeout(this.toastHideTimer);
-
-                this.toastTimer = setTimeout(() => {
-                    this.mensagem.classList.add('toast-leaving');
-                    this.mensagem.classList.remove('toast-visible');
-                }, 2600);
-
-                this.toastHideTimer = setTimeout(() => {
-                    this.mensagem.classList.remove('toast-visible', 'toast-leaving');
-                    this.mensagem.textContent = '';
-                    this.mensagem.className = 'mensagem';
-                }, 3400);
-            } else {
-                this.mensagem.classList.remove('toast-visible', 'toast-leaving');
-                clearTimeout(this.toastTimer);
-                clearTimeout(this.toastHideTimer);
-            }
-        }
+        const formularioAberto = Boolean(this.modalCadastro && this.modalCadastro.classList.contains('open'));
 
         if (this.mensagemFormulario) {
-            this.mensagemFormulario.textContent = texto;
-            this.mensagemFormulario.className = classe;
+            this.mensagemFormulario.textContent = formularioAberto ? texto : '';
+            this.mensagemFormulario.className = `${formularioAberto ? classe : 'mensagem'} mensagem-formulario`;
+        }
+
+        if (!this.mensagem) return;
+
+        clearTimeout(this.toastTimer);
+        clearTimeout(this.toastHideTimer);
+        this.mensagem.classList.remove('toast-visible', 'toast-leaving');
+        this.mensagem.textContent = formularioAberto ? '' : texto;
+        this.mensagem.className = formularioAberto ? 'mensagem' : classe;
+        this.mensagem.setAttribute('role', 'status');
+        this.mensagem.setAttribute('aria-live', 'polite');
+
+        if (!formularioAberto && tipo === 'sucesso') {
+            this.mensagem.classList.add('toast-visible');
+
+            this.toastTimer = setTimeout(() => {
+                this.mensagem.classList.add('toast-leaving');
+                this.mensagem.classList.remove('toast-visible');
+            }, 2600);
+
+            this.toastHideTimer = setTimeout(() => {
+                this.mensagem.classList.remove('toast-visible', 'toast-leaving');
+                this.mensagem.textContent = '';
+                this.mensagem.className = 'mensagem';
+            }, 3400);
         }
     }
 }

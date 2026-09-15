@@ -52,6 +52,26 @@
                     <span class="search-icon" aria-hidden="true">⌕</span>
                     <input type="search" id="searchInput" placeholder="Buscar por leitor ou livro">
                 </div>
+
+                <div class="filter-row">
+                    <label class="filter-label">
+                        <span>Situação</span>
+                        <select id="filterSituacao">
+                            <option value="">Todos</option>
+                            <option value="ATIVO">Somente ativos</option>
+                            <option value="DEVOLVIDO">Somente devolvidos</option>
+                        </select>
+                    </label>
+
+                    <label class="filter-label">
+                        <span>Ordenar</span>
+                        <select id="sortSelect">
+                            <option value="emprestimo-recente">Empréstimo mais recente</option>
+                            <option value="devolucao-proxima">Devolução prevista mais próxima</option>
+                            <option value="devolucao-distante">Devolução prevista mais distante</option>
+                        </select>
+                    </label>
+                </div>
             </section>
 
             <section class="catalog-list-wrapper">
@@ -75,18 +95,16 @@
                 <p id="mensagem-formulario" class="mensagem mensagem-formulario" role="status"></p>
 
                 <div class="form-grid">
-                    <div class="campo">
-                        <label for="leitorSelect">Leitor</label>
-                        <select id="leitorSelect" name="leitorSelect" required>
-                            <option value="">Selecione um leitor</option>
-                        </select>
+                    <div class="campo campo-busca">
+                        <label for="leitorBusca">Leitor</label>
+                        <input type="text" id="leitorBusca" placeholder="Digite o nome ou o e-mail">
+                        <ul class="busca-lista" id="leitorSugestoes" role="listbox" hidden></ul>
                     </div>
 
-                    <div class="campo">
-                        <label for="exemplarSelect">Exemplar</label>
-                        <select id="exemplarSelect" name="exemplarSelect" required>
-                            <option value="">Selecione um exemplar</option>
-                        </select>
+                    <div class="campo campo-busca">
+                        <label for="exemplarBusca">Exemplar disponível</label>
+                        <input type="text" id="exemplarBusca" placeholder="Digite o título do livro">
+                        <ul class="busca-lista" id="exemplarSugestoes" role="listbox" hidden></ul>
                     </div>
 
                     <div class="campo">
@@ -128,6 +146,7 @@
     </div>
 
     <script src="assets/js/api.js" defer></script>
+    <script src="assets/js/utils.js" defer></script>
     <script src="assets/js/emprestimos.js" defer></script>
 </body>
 </html>

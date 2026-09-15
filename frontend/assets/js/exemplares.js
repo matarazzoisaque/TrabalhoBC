@@ -22,7 +22,14 @@ class TelaExemplares {
         this.openForm = document.getElementById('openForm');
         this.searchInput = document.getElementById('searchInput');
         this.themeToggle = document.getElementById('themeToggle');
-        this.livroSelect = document.getElementById('livroSelect');
+        // Campo de busca no lugar da lista suspensa; quem procura os livros é o servidor.
+        this.campoLivro = new CampoBusca({
+            input: document.getElementById('livroBusca'),
+            lista: document.getElementById('livroSugestoes'),
+            buscar: (texto) => this.api.listarLivros({ busca: texto }),
+            descrever: (livro) => this.descreverLivro(livro),
+            obterId: (livro) => livro.id_livro
+        });
         this.campoQuantidade = document.getElementById('campoQuantidade');
         this.inputQuantidade = document.getElementById('quantidade');
         this.closeConfirmacao = document.getElementById('closeConfirmacao');
@@ -155,11 +162,10 @@ class TelaExemplares {
         }
     }
 
-    /* Livros para o select do formulário e a lista de exemplares. */
+    /* Livros (para autor e gênero nos cards) e a lista de exemplares. */
     async carregarDados() {
         try {
             this.livros = await this.api.listarLivros();
-            this.popularSelectLivros();
         } catch (erro) {
             this.exibirMensagem(erro.message, 'erro');
         }
@@ -177,17 +183,10 @@ class TelaExemplares {
         }
     }
 
-    popularSelectLivros() {
-        if (!this.livroSelect || !Array.isArray(this.livros)) return;
-
-        this.livroSelect.replaceChildren();
-        const vazio = new Option('Selecione um livro', '');
-        this.livroSelect.appendChild(vazio);
-
-        for (const livro of this.livros) {
-            const option = new Option(livro.titulo, String(livro.id_livro));
-            this.livroSelect.appendChild(option);
-        }
+    /* Como um livro aparece na lista de sugestões: título e autor, para diferenciar títulos iguais. */
+    descreverLivro(livro) {
+        const autor = livro.autor ? formatarListaTruncada(livro.autor, formatarNomeABNT) : '';
+        return autor ? `${livro.titulo} — ${autor}` : livro.titulo;
     }
 
     desenharCatalogo(exemplares) {
@@ -335,7 +334,7 @@ class TelaExemplares {
         if (this.campoQuantidade) this.campoQuantidade.style.display = '';
         this.modalTitle.textContent = 'Cadastrar exemplar';
         this.formulario.querySelector('button[type="submit"]').textContent = 'Cadastrar exemplar';
-        this.popularSelectLivros();
+        this.campoLivro.limpar();
         if (this.modalCadastro) {
             this.modalCadastro.classList.add('open');
         }
@@ -350,6 +349,7 @@ class TelaExemplares {
             this.formulario.reset();
         }
 
+        this.campoLivro.limpar();
         this.exemplarEditandoId = null;
     }
 
@@ -357,8 +357,10 @@ class TelaExemplares {
         this.exemplarEditandoId = exemplar.id_exemplar;
         this.modalTitle.textContent = 'Editar exemplar';
         this.formulario.querySelector('button[type="submit"]').textContent = 'Salvar exemplar';
-        this.popularSelectLivros();
-        this.formulario.livroSelect.value = String(exemplar.id_livro);
+        const livro = (Array.isArray(this.livros)
+            ? this.livros.find((item) => Number(item.id_livro) === Number(exemplar.id_livro))
+            : null) || { id_livro: exemplar.id_livro, titulo: exemplar.titulo_livro };
+        this.campoLivro.definir(livro);
         if (this.campoQuantidade) this.campoQuantidade.style.display = 'none';
 
         if (this.modalCadastro) {
@@ -372,7 +374,7 @@ class TelaExemplares {
         if (!this.formulario) return;
 
         const botao = this.formulario.querySelector('button[type="submit"]');
-        const idLivro = this.formulario.livroSelect.value;
+        const idLivro = this.campoLivro.valor;
         const quantidade = this.inputQuantidade ? Math.max(1, parseInt(this.inputQuantidade.value, 10) || 1) : 1;
         const editando = this.exemplarEditandoId;
 
@@ -447,40 +449,39 @@ class TelaExemplares {
         this.exemplarExcluindo = null;
     }
 
+    /* Mostra a mensagem num lugar só: dentro do formulário, se ele estiver aberto; senão, no aviso da tela. */
     exibirMensagem(texto, tipo = '') {
         const classe = tipo ? `mensagem ${tipo}` : 'mensagem';
-
-        if (this.mensagem) {
-            this.mensagem.textContent = texto;
-            this.mensagem.className = classe;
-            this.mensagem.setAttribute('role', 'status');
-            this.mensagem.setAttribute('aria-live', 'polite');
-
-            if (tipo === 'sucesso') {
-                this.mensagem.classList.add('toast-visible');
-                clearTimeout(this.toastTimer);
-                clearTimeout(this.toastHideTimer);
-
-                this.toastTimer = setTimeout(() => {
-                    this.mensagem.classList.add('toast-leaving');
-                    this.mensagem.classList.remove('toast-visible');
-                }, 2600);
-
-                this.toastHideTimer = setTimeout(() => {
-                    this.mensagem.classList.remove('toast-visible', 'toast-leaving');
-                    this.mensagem.textContent = '';
-                    this.mensagem.className = 'mensagem';
-                }, 3400);
-            } else {
-                this.mensagem.classList.remove('toast-visible', 'toast-leaving');
-                clearTimeout(this.toastTimer);
-                clearTimeout(this.toastHideTimer);
-            }
-        }
+        const formularioAberto = Boolean(this.modalCadastro && this.modalCadastro.classList.contains('open'));
 
         if (this.mensagemFormulario) {
-            this.mensagemFormulario.textContent = texto;
-            this.mensagemFormulario.className = classe;
+            this.mensagemFormulario.textContent = formularioAberto ? texto : '';
+            this.mensagemFormulario.className = `${formularioAberto ? classe : 'mensagem'} mensagem-formulario`;
+        }
+
+        if (!this.mensagem) return;
+
+        clearTimeout(this.toastTimer);
+        clearTimeout(this.toastHideTimer);
+        this.mensagem.classList.remove('toast-visible', 'toast-leaving');
+        this.mensagem.textContent = formularioAberto ? '' : texto;
+        this.mensagem.className = formularioAberto ? 'mensagem' : classe;
+        this.mensagem.setAttribute('role', 'status');
+        this.mensagem.setAttribute('aria-live', 'polite');
+
+        if (!formularioAberto && tipo === 'sucesso') {
+            this.mensagem.classList.add('toast-visible');
+
+            this.toastTimer = setTimeout(() => {
+                this.mensagem.classList.add('toast-leaving');
+                this.mensagem.classList.remove('toast-visible');
+            }, 2600);
+
+            this.toastHideTimer = setTimeout(() => {
+                this.mensagem.classList.remove('toast-visible', 'toast-leaving');
+                this.mensagem.textContent = '';
+                this.mensagem.className = 'mensagem';
+            }, 3400);
         }
     }
 }
