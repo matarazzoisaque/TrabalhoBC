@@ -229,7 +229,7 @@ CREATE TABLE emprestimos (
 | Front-end: HTML5 + CSS3 + JS puro | ✅ Sim | `frontend/` — sem SPA, sem React/Angular/Vue |
 | `pydantic>=2.0` (validação de dados) | ✅ Permitido | Biblioteca de validação de tipos de dados, não framework/ORM; não substitui SQL nem gerencia conexão com banco |
 
-> **Nota sobre o Pydantic:** O Pydantic é uma biblioteca Python de validação de dados em tempo de execução, equivalente a um conjunto de `if`/`raise` tipados. Ele não gerencia conexões, não gera SQL, não abstrai o banco — o SQL é inteiramente escrito à mão nos repositories. O uso está dentro das restrições da NP1.
+> **Nota sobre o Pydantic:** O Pydantic é uma biblioteca Python de validação de dados em tempo de execução, equivalente a um conjunto de `if`/`raise` tipados. Ele não gerencia conexões, não gera SQL, não abstrai o banco — o SQL é inteiramente escrito sem uso de bibliotecas. O uso está dentro das restrições da NP1.
 
 ---
 
