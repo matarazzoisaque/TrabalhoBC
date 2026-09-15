@@ -1,4 +1,4 @@
-# Book Book — Sistema de Biblioteca Digital
+# Book Book — Sistema Gerenciador de Acervo
 
 - **Curso:** Ciência da Computação
 - **Turma:** CC4P17 e CC4Q17
@@ -21,7 +21,7 @@
 
 ## Descrição do Projeto
 
-**Book Book** é um sistema de gerenciamento de biblioteca digital desenvolvido para fins acadêmicos. A aplicação permite organizar livros, leitores, exemplares físicos e empréstimos por meio de uma interface web simples e intuitiva.
+**Book Book** é um sistema gerenciador de acervo desenvolvido para fins acadêmicos. A aplicação permite organizar livros, leitores, exemplares físicos e empréstimos por meio de uma interface web simples e intuitiva.
 
 ### Tema e Escopo Funcional
 
