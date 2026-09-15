@@ -18,18 +18,19 @@ class ErroBanco(Exception):
 class Database:
     """Encapsula a conexão com o MySQL."""
 
-    def __init__(self, host: str, usuario: str, senha: str, banco: str):
+    def __init__(self, host: str, usuario: str, senha: str, banco: str, porta: int = 3306):
         self.host = host
         self.usuario = usuario
         self.senha = senha
         self.banco = banco
+        self.porta = porta
         self.conexao = None
 
     def conectar(self) -> None:
         """Abre a conexão e guarda em self.conexao."""
         try:
             self.conexao = mysql.connector.connect(
-                host=self.host, user=self.usuario, password=self.senha, database=self.banco
+                host=self.host, port=self.porta, user=self.usuario, password=self.senha, database=self.banco
             )
         except mysql.connector.Error as erro:
             raise ErroBanco(f"Não foi possível conectar ao MySQL: {erro}") from erro

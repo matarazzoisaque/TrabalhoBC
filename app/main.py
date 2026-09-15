@@ -52,7 +52,7 @@ def montar_repositorios():
         exemplares = ExemplarRepositoryMemoria(livros)
         emprestimos = EmprestimoRepositoryMemoria(leitores, exemplares)
     else:
-        db = Database(config.DB_HOST, config.DB_USER, config.DB_PASSWORD, config.DB_NAME)
+        db = Database(config.DB_HOST, config.DB_USER, config.DB_PASSWORD, config.DB_NAME, config.DB_PORT)
         livros = LivroRepository(db)
         leitores = LeitorRepository(db)
         exemplares = ExemplarRepository(db)
