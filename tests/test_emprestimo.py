@@ -220,6 +220,17 @@ class ConexaoFalsa:
 class TestTransacaoDoDatabase(unittest.TestCase):
     """Se um comando não altera a linha esperada, nada é gravado."""
 
+    def test_conecta_na_porta_configurada(self):
+        conexao = ConexaoFalsa()
+        with mock.patch("app.core.database.mysql.connector.connect", return_value=conexao) as conectar:
+            banco = Database("host", "usuario", "senha", "banco", porta=3307)
+            banco.conectar()
+
+        conectar.assert_called_once_with(
+            host="host", port=3307, user="usuario", password="senha", database="banco"
+        )
+        banco.fechar()
+
     def test_rollback_quando_o_exemplar_ja_foi_emprestado(self):
         conexao = ConexaoFalsa()
         with mock.patch("app.core.database.mysql.connector.connect", return_value=conexao):

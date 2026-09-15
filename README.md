@@ -96,6 +96,12 @@ mysql -u root -p < database/dml_inicial.sql
 
 ### 2. Ajustar as credenciais
 
+Crie o arquivo local de configuracao a partir do exemplo:
+
+```powershell
+Copy-Item config/config.example.py config/config.py
+```
+
 Edite `config/config.py` com o usuário e a senha do seu MySQL:
 
 ```python
