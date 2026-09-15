@@ -225,7 +225,7 @@ CREATE TABLE emprestimos (
 | SGBD: MySQL 8+ | ✅ Sim | `database/ddl.sql`, `mysql-connector-python` |
 | Back-end: Python | ✅ Sim | `app/` — Python 3.10+ |
 | Sem framework no back-end | ✅ Sim | Usa apenas `http.server` (stdlib) e `mysql-connector-python` |
-| Sem ORM | ✅ Sim | SQL escrito à mão em todos os repositories |
+| Sem ORM | ✅ Sim | SQL escrito sem uso de bibliotecas |
 | Front-end: HTML5 + CSS3 + JS puro | ✅ Sim | `frontend/` — sem SPA, sem React/Angular/Vue |
 | `pydantic>=2.0` (validação de dados) | ✅ Permitido | Biblioteca de validação de tipos de dados, não framework/ORM; não substitui SQL nem gerencia conexão com banco |
 
