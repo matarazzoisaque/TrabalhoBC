@@ -1,37 +1,52 @@
-# Regras de Negócio
+# Regras de negocio
 
-Regras aplicadas nesta etapa do projeto. Todas ficam em
-`app/services/livro_service.py`, antes de qualquer dado chegar ao banco.
+As regras abaixo sao aplicadas pelos services antes de qualquer gravacao no banco. As restricoes equivalentes tambem existem no MySQL, definidas em `database/ddl.sql`.
 
-## Cadastro de livro
+## Livros
 
-| # | Regra | Retorno quando desrespeitada |
-|---|---|---|
-| RN01 | O **título** é obrigatório e não pode ser apenas espaços | `400` — "O campo título é obrigatório." |
-| RN02 | O **título** tem no máximo 200 caracteres | `400` — "O campo título deve ter no máximo 200 caracteres." |
-| RN03 | O **autor** é obrigatório e não pode ser apenas espaços | `400` — "O campo autor é obrigatório." |
-| RN04 | O **autor** tem no máximo 150 caracteres | `400` — "O campo autor deve ter no máximo 150 caracteres." |
-| RN05 | O **ano de publicação** é obrigatório | `400` — "O campo ano de publicação é obrigatório." |
-| RN06 | O **ano de publicação** precisa ser um número inteiro | `400` — "O ano de publicação deve ser um número inteiro." |
-| RN07 | O **ano de publicação** fica entre 1450 e o ano seguinte ao atual | `400` — "O ano de publicação deve estar entre 1450 e AAAA." |
-| RN08 | Espaços sobrando no início e no fim dos textos são removidos antes de gravar | — |
-| RN09 | Não existem dois livros com o mesmo título **e** o mesmo autor | `503` — erro de unicidade devolvido pelo banco |
+| Regra | Comportamento |
+| --- | --- |
+| Campos obrigatorios | Titulo, autor, genero, ano de lancamento e resumo nao podem ficar vazios. |
+| Limites | Titulo: 200 caracteres; autor: 150; genero: 80; resumo: 1.000. |
+| Ano | Deve estar entre 1450 e o ano atual. |
+| Duplicidade | Nao pode haver dois livros com o mesmo titulo e autor. |
+| Exclusao | Um livro com exemplares cadastrados nao pode ser removido. |
 
-O limite inferior de 1450 corresponde ao início da imprensa de tipos móveis;
-o limite superior é o ano seguinte ao atual, para aceitar livros com data de
-publicação já anunciada.
+## Leitores
 
-A regra RN09 é garantida pela restrição `uq_livros_titulo_autor`, definida em
-`database/ddl.sql`.
+| Regra | Comportamento |
+| --- | --- |
+| Campos obrigatorios | Nome e e-mail sao obrigatorios. |
+| E-mail | Precisa ter formato valido, e armazenado em minusculas e e unico. |
+| Telefone | E opcional; quando informado, aceita numeros, espacos, parenteses, `+` e `-`. |
+| Exclusao | Um leitor que possui emprestimos, ativos ou devolvidos, nao pode ser removido. |
 
-## Listagem do acervo
+## Exemplares
 
-| # | Regra |
-|---|---|
-| RN10 | Os livros são listados em ordem alfabética de título |
+| Regra | Comportamento |
+| --- | --- |
+| Vínculo | Todo exemplar deve apontar para um livro existente. |
+| Cadastro | Todo exemplar novo inicia como `DISPONIVEL`. |
+| Status | O status nao pode ser escolhido ou editado manualmente. |
+| Exclusao | Um exemplar emprestado ou com historico de emprestimos nao pode ser removido. |
 
-## Próximas etapas
+## Emprestimos e devolucoes
 
-Leitores, exemplares e empréstimos ainda não fazem parte do sistema. Suas
-regras (prazo de devolução, limite de empréstimos por leitor e controle de
-status do exemplar) serão detalhadas quando as entidades forem criadas.
+| Regra | Comportamento |
+| --- | --- |
+| Cadastro | Exige leitor e exemplar existentes. |
+| Disponibilidade | Apenas um exemplar `DISPONIVEL` pode ser emprestado. |
+| Data | A data do emprestimo nao pode estar no futuro. |
+| Transacao | O registro do emprestimo e a mudanca para `EMPRESTADO` ocorrem juntos. |
+| Devolucao | Registra a data atual e devolve o exemplar para `DISPONIVEL`. |
+| Historico | Um emprestimo devolvido permanece registrado; sua devolucao nao pode ser repetida. |
+
+## Regras do banco
+
+O MySQL complementa as regras da aplicacao com:
+
+- chaves estrangeiras entre livros, exemplares, leitores e emprestimos;
+- `ON DELETE RESTRICT` para preservar registros relacionados;
+- unicidade de `(titulo, autor)` em livros e de `email` em leitores;
+- verificacao do ano de lancamento e da ordem entre as datas do emprestimo;
+- indices para as consultas mais usadas.
