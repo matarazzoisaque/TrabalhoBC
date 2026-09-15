@@ -9,7 +9,7 @@ esteja DISPONIVEL, cria o empréstimo e o exemplar vira EMPRESTADO.
 Fluxo da devolução: grava a data de devolução e o exemplar volta a DISPONIVEL.
 """
 
-from datetime import date
+from datetime import date, timedelta
 
 from pydantic import ValidationError
 
@@ -20,7 +20,7 @@ from app.repositories.exemplar_repository import ExemplarRepository
 from app.repositories.leitor_repository import LeitorRepository
 
 # Filtros que a tela pode enviar na listagem.
-FILTROS = ("busca", "situacao")
+FILTROS = ("busca", "situacao", "ordem")
 SITUACOES_ACEITAS = (SITUACAO_ATIVO, SITUACAO_DEVOLVIDO)
 
 # Mensagem usada pelo Servidor para responder 404 em vez de 400.
@@ -66,7 +66,12 @@ class EmprestimoService:
             return False, ["O exemplar selecionado não está disponível para empréstimo."]
 
         # Um empréstimo novo sempre começa aberto: o id e a devolução não vêm da tela.
-        emprestimo = emprestimo.model_copy(update={"id_emprestimo": None, "data_devolucao": None})
+        # A data prevista sai do prazo digitado, e é ela que fica gravada.
+        emprestimo = emprestimo.model_copy(update={
+            "id_emprestimo": None,
+            "data_devolucao": None,
+            "data_prevista_devolucao": emprestimo.data_emprestimo + timedelta(days=emprestimo.prazo_dias),
+        })
         criado = self.repository.registrar(emprestimo)
         return True, self.repository.buscar_por_id(criado.id_emprestimo).model_dump(mode="json")
 

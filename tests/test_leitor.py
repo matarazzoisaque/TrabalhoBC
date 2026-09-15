@@ -68,6 +68,19 @@ class TestLeitor(unittest.TestCase):
     def test_telefone_com_letras(self):
         self.assertIn("telefone", self.erros({**JOAO, "telefone": "15 9999-abcd"})[0])
 
+    def test_telefone_com_ddd_fixo_e_celular(self):
+        self.assertEqual(Leitor.model_validate({**JOAO, "telefone": "(15) 3333-4444"}).telefone, "(15) 3333-4444")
+        self.assertEqual(Leitor.model_validate({**JOAO, "telefone": "15999990001"}).telefone, "15999990001")
+
+    def test_telefone_com_poucos_digitos(self):
+        for telefone in ("123", "99999-0001", "(15) 9999-000"):
+            with self.subTest(telefone=telefone):
+                self.assertEqual(self.erros({**JOAO, "telefone": telefone}),
+                                 ["O campo telefone deve ter DDD e número: 10 dígitos (fixo) ou 11 (celular)."])
+
+    def test_telefone_com_digitos_demais(self):
+        self.assertIn("10 dígitos (fixo) ou 11", self.erros({**JOAO, "telefone": "(015) 99999-00012"})[0])
+
     def test_telefone_acima_de_20(self):
         self.assertEqual(self.erros({**JOAO, "telefone": "1" * 21}),
                          ["O campo telefone deve ter no máximo 20 caracteres."])
@@ -133,7 +146,7 @@ class TestLeitorService(unittest.TestCase):
                                       "ano_lancamento": 1949, "resumo": "Distopia."})
         self.exemplar_service.cadastrar({"id_livro": 1})
         self.emprestimo_service.registrar({"id_leitor": 1, "id_exemplar": 1,
-                                           "data_emprestimo": date.today().isoformat()})
+                                           "data_emprestimo": date.today().isoformat(), "prazo_dias": 7})
         ok, erros = self.service.remover(1)
         self.assertFalse(ok)
         self.assertEqual(erros, ["Este leitor tem empréstimos registrados e não pode ser excluído."])

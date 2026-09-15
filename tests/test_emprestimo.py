@@ -26,6 +26,7 @@ from app.services.leitor_service import LeitorService
 from app.services.livro_service import LivroService
 
 HOJE = date.today().isoformat()
+VALIDO = {"id_leitor": 1, "id_exemplar": 1, "data_emprestimo": HOJE, "prazo_dias": 7}
 
 
 class TestEmprestimo(unittest.TestCase):
@@ -37,23 +38,37 @@ class TestEmprestimo(unittest.TestCase):
         return Emprestimo.mensagens_de_erro(contexto.exception)
 
     def test_campos_obrigatorios(self):
-        self.assertEqual(self.erros({"id_leitor": "", "data_emprestimo": ""}), [
+        self.assertEqual(self.erros({"id_leitor": "", "data_emprestimo": "", "prazo_dias": ""}), [
             "O campo leitor é obrigatório.",
             "O campo exemplar é obrigatório.",
             "O campo data do empréstimo é obrigatório.",
+            "O campo prazo de devolução é obrigatório.",
         ])
 
     def test_data_futura_e_recusada(self):
         amanha = (date.today() + timedelta(days=1)).isoformat()
-        self.assertEqual(self.erros({"id_leitor": 1, "id_exemplar": 1, "data_emprestimo": amanha}),
+        self.assertEqual(self.erros({**VALIDO, "data_emprestimo": amanha}),
                          ["A data do empréstimo não pode ser futura."])
 
     def test_data_invalida(self):
-        self.assertEqual(self.erros({"id_leitor": 1, "id_exemplar": 1, "data_emprestimo": "ontem"}),
+        self.assertEqual(self.erros({**VALIDO, "data_emprestimo": "ontem"}),
                          ["O campo data do empréstimo deve ser uma data válida."])
 
+    def test_prazo_fora_do_intervalo(self):
+        for prazo in (0, 366, -3):
+            with self.subTest(prazo=prazo):
+                self.assertEqual(self.erros({**VALIDO, "prazo_dias": prazo}),
+                                 ["O prazo de devolução deve ser de 1 a 365 dias."])
+
+    def test_prazo_nao_numerico(self):
+        self.assertEqual(self.erros({**VALIDO, "prazo_dias": "uma semana"}),
+                         ["O campo prazo de devolução deve ser um número inteiro."])
+
+    def test_prazo_nao_aparece_na_resposta(self):
+        self.assertNotIn("prazo_dias", Emprestimo.model_validate(VALIDO).model_dump())
+
     def test_situacao_sai_da_data_de_devolucao(self):
-        emprestimo = Emprestimo.model_validate({"id_leitor": 1, "id_exemplar": 1, "data_emprestimo": HOJE})
+        emprestimo = Emprestimo.model_validate(VALIDO)
         self.assertEqual(emprestimo.model_dump()["situacao"], "ATIVO")
         devolvido = emprestimo.model_copy(update={"data_devolucao": date.today()})
         self.assertEqual(devolvido.model_dump()["situacao"], "DEVOLVIDO")
@@ -81,8 +96,7 @@ class TestEmprestimoService(unittest.TestCase):
         self.exemplar_service.cadastrar({"id_livro": 1})
 
     def emprestar(self, id_leitor=1, id_exemplar=1, **extra):
-        return self.service.registrar({"id_leitor": id_leitor, "id_exemplar": id_exemplar,
-                                       "data_emprestimo": HOJE, **extra})
+        return self.service.registrar({**VALIDO, "id_leitor": id_leitor, "id_exemplar": id_exemplar, **extra})
 
     def status_do_exemplar(self, id_exemplar):
         return next(exemplar["status"] for exemplar in self.exemplar_service.listar({})
@@ -95,6 +109,30 @@ class TestEmprestimoService(unittest.TestCase):
         self.assertEqual(emprestimo["nome_leitor"], "João Silva")
         self.assertEqual(emprestimo["titulo_livro"], "Dom Casmurro")
         self.assertEqual(self.status_do_exemplar(1), "EMPRESTADO")
+
+    def test_data_prevista_sai_do_prazo(self):
+        ok, emprestimo = self.emprestar(prazo_dias="14")
+        self.assertTrue(ok)
+        self.assertEqual(emprestimo["data_prevista_devolucao"], (date.today() + timedelta(days=14)).isoformat())
+        self.assertNotIn("prazo_dias", emprestimo)
+
+    def test_data_prevista_nao_vem_da_tela(self):
+        ok, emprestimo = self.emprestar(prazo_dias=7, data_prevista_devolucao="2000-01-01")
+        self.assertTrue(ok)
+        self.assertEqual(emprestimo["data_prevista_devolucao"], (date.today() + timedelta(days=7)).isoformat())
+
+    def test_ordena_pela_devolucao_prevista(self):
+        self.emprestar(id_leitor=1, id_exemplar=1, prazo_dias=30)
+        self.emprestar(id_leitor=2, id_exemplar=2, prazo_dias=3)
+        proxima = [item["nome_leitor"] for item in self.service.listar({"ordem": "devolucao-proxima"})]
+        distante = [item["nome_leitor"] for item in self.service.listar({"ordem": "devolucao-distante"})]
+        self.assertEqual(proxima, ["Maria Santos", "João Silva"])
+        self.assertEqual(distante, ["João Silva", "Maria Santos"])
+
+    def test_ordem_desconhecida_usa_a_padrao(self):
+        self.emprestar(id_leitor=1, id_exemplar=1)
+        self.emprestar(id_leitor=2, id_exemplar=2)
+        self.assertEqual([item["id_emprestimo"] for item in self.service.listar({"ordem": "xpto"})], [2, 1])
 
     def test_id_e_devolucao_nao_vem_da_tela(self):
         ok, emprestimo = self.emprestar(id_emprestimo=99, data_devolucao=HOJE)
@@ -165,13 +203,17 @@ class TestSQLDoEmprestimoRepository(unittest.TestCase):
     def setUp(self):
         self.database = DatabaseQueGuardaTransacao()
         self.repositorio = EmprestimoRepository(self.database)
-        self.emprestimo = Emprestimo.model_validate({"id_leitor": 1, "id_exemplar": 3, "data_emprestimo": HOJE})
+        self.prevista = date.today() + timedelta(days=7)
+        self.emprestimo = Emprestimo.model_validate(
+            {**VALIDO, "id_exemplar": 3}
+        ).model_copy(update={"data_prevista_devolucao": self.prevista})
 
     def test_registrar_insere_e_marca_emprestado_na_mesma_transacao(self):
         criado = self.repositorio.registrar(self.emprestimo)
         (sql_insert, params_insert), (sql_update, params_update) = self.database.comandos
         self.assertTrue(sql_insert.startswith("INSERT INTO emprestimos"))
-        self.assertEqual(params_insert, (1, 3, date.today()))
+        self.assertIn("data_prevista_devolucao", sql_insert)
+        self.assertEqual(params_insert, (1, 3, date.today(), self.prevista))
         self.assertIn("UPDATE exemplares SET status = %s WHERE id_exemplar = %s AND status = %s", sql_update)
         self.assertEqual(params_update, ("EMPRESTADO", 3, "DISPONIVEL"))
         self.assertEqual(criado.id_emprestimo, 7)

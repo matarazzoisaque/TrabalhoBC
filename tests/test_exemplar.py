@@ -80,7 +80,7 @@ class TestExemplarService(unittest.TestCase):
 
     def emprestar(self, id_exemplar):
         return self.emprestimo_service.registrar({"id_leitor": 1, "id_exemplar": id_exemplar,
-                                                  "data_emprestimo": date.today().isoformat()})
+                                                  "data_emprestimo": date.today().isoformat(), "prazo_dias": 7})
 
     def test_cadastrar_comeca_disponivel_e_traz_o_titulo(self):
         ok, exemplar = self.service.cadastrar({"id_livro": 1})

@@ -61,6 +61,7 @@ CREATE TABLE emprestimos (
     id_leitor       INT  NOT NULL,
     id_exemplar     INT  NOT NULL,
     data_emprestimo DATE NOT NULL,
+    data_prevista_devolucao DATE NOT NULL,
     data_devolucao  DATE NULL,
 
     CONSTRAINT pk_emprestimos PRIMARY KEY (id_emprestimo),
@@ -72,7 +73,10 @@ CREATE TABLE emprestimos (
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT ck_emprestimos_datas
         CHECK (data_devolucao IS NULL OR data_devolucao >= data_emprestimo),
+    CONSTRAINT ck_emprestimos_prevista
+        CHECK (data_prevista_devolucao > data_emprestimo),
     INDEX idx_emprestimos_leitor (id_leitor),
     INDEX idx_emprestimos_exemplar (id_exemplar),
-    INDEX idx_emprestimos_abertos (data_devolucao)
+    INDEX idx_emprestimos_abertos (data_devolucao),
+    INDEX idx_emprestimos_prevista (data_prevista_devolucao)
 ) ENGINE = InnoDB;

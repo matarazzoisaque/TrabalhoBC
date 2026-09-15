@@ -23,7 +23,8 @@ from app.repositories.livro_repository import escapar_like, sem_acento
 # Os JOINs trazem o nome do leitor e o título do livro, para a tela não
 # precisar juntar os dados.
 SELECT_EMPRESTIMOS = (
-    "SELECT em.id_emprestimo, em.id_leitor, em.id_exemplar, em.data_emprestimo, em.data_devolucao, "
+    "SELECT em.id_emprestimo, em.id_leitor, em.id_exemplar, em.data_emprestimo, "
+    "em.data_prevista_devolucao, em.data_devolucao, "
     "le.nome AS nome_leitor, ex.id_livro, li.titulo AS titulo_livro "
     "FROM emprestimos em "
     "JOIN leitores le ON le.id_leitor = em.id_leitor "
@@ -38,6 +39,15 @@ SITUACOES = {
     SITUACAO_DEVOLVIDO: "em.data_devolucao IS NOT NULL",
 }
 
+ORDEM_PADRAO = "emprestimo-recente"
+
+# Ordenações aceitas, pelo mesmo motivo: o ORDER BY só recebe estes valores.
+ORDENACOES = {
+    "emprestimo-recente": "em.data_emprestimo DESC, em.id_emprestimo DESC",
+    "devolucao-proxima": "em.data_prevista_devolucao ASC, em.id_emprestimo ASC",
+    "devolucao-distante": "em.data_prevista_devolucao DESC, em.id_emprestimo DESC",
+}
+
 
 class EmprestimoRepository:
     """Comandos SQL da tabela emprestimos."""
@@ -45,8 +55,9 @@ class EmprestimoRepository:
     def __init__(self, database: Database):
         self.database = database
 
-    def listar(self, busca: str | None = None, situacao: str | None = None) -> list[Emprestimo]:
-        """SELECT dos empréstimos, do mais recente para o mais antigo.
+    def listar(self, busca: str | None = None, situacao: str | None = None,
+               ordem: str = ORDEM_PADRAO) -> list[Emprestimo]:
+        """SELECT dos empréstimos, com busca, situação e ordenação opcionais.
 
         A busca procura no nome do leitor e no título do livro.
         """
@@ -57,7 +68,7 @@ class EmprestimoRepository:
             params += [f"%{escapar_like(busca)}%"] * 2
         if situacao in SITUACOES:
             sql += f" AND {SITUACOES[situacao]}"
-        sql += " ORDER BY em.data_emprestimo DESC, em.id_emprestimo DESC"
+        sql += f" ORDER BY {ORDENACOES.get(ordem, ORDENACOES[ORDEM_PADRAO])}"
         return [Emprestimo.model_construct(**linha) for linha in self.database.consultar(sql, tuple(params))]
 
     def buscar_por_id(self, id_emprestimo: int) -> Emprestimo | None:
@@ -73,9 +84,11 @@ class EmprestimoRepository:
         """
         resultados = self.database.executar_transacao([
             (
-                "INSERT INTO emprestimos (id_leitor, id_exemplar, data_emprestimo, data_devolucao) "
-                "VALUES (%s, %s, %s, NULL)",
-                (emprestimo.id_leitor, emprestimo.id_exemplar, emprestimo.data_emprestimo),
+                "INSERT INTO emprestimos "
+                "(id_leitor, id_exemplar, data_emprestimo, data_prevista_devolucao, data_devolucao) "
+                "VALUES (%s, %s, %s, %s, NULL)",
+                (emprestimo.id_leitor, emprestimo.id_exemplar, emprestimo.data_emprestimo,
+                 emprestimo.data_prevista_devolucao),
             ),
             (
                 "UPDATE exemplares SET status = %s WHERE id_exemplar = %s AND status = %s",
@@ -135,7 +148,15 @@ class EmprestimoRepositoryMemoria:
             "titulo_livro": exemplar.titulo_livro if exemplar else None,
         })
 
-    def listar(self, busca: str | None = None, situacao: str | None = None) -> list[Emprestimo]:
+    # Mesmas ordenações do SQL: (chave de ordenação, decrescente?).
+    ORDENACOES = {
+        "emprestimo-recente": (lambda item: (item.data_emprestimo, item.id_emprestimo), True),
+        "devolucao-proxima": (lambda item: (item.data_prevista_devolucao, item.id_emprestimo), False),
+        "devolucao-distante": (lambda item: (item.data_prevista_devolucao, item.id_emprestimo), True),
+    }
+
+    def listar(self, busca: str | None = None, situacao: str | None = None,
+               ordem: str = ORDEM_PADRAO) -> list[Emprestimo]:
         """Filtra e ordena do mesmo jeito que o SQL do EmprestimoRepository."""
         emprestimos = [self._com_dados(emprestimo) for emprestimo in self.emprestimos]
         if busca:
@@ -144,8 +165,8 @@ class EmprestimoRepositoryMemoria:
                            if termo in sem_acento(f"{emprestimo.nome_leitor or ''} {emprestimo.titulo_livro or ''}")]
         if situacao in SITUACOES:
             emprestimos = [emprestimo for emprestimo in emprestimos if emprestimo.situacao == situacao]
-        return sorted(emprestimos, key=lambda emprestimo: (emprestimo.data_emprestimo, emprestimo.id_emprestimo),
-                      reverse=True)
+        chave, decrescente = self.ORDENACOES.get(ordem, self.ORDENACOES[ORDEM_PADRAO])
+        return sorted(emprestimos, key=chave, reverse=decrescente)
 
     def buscar_por_id(self, id_emprestimo: int) -> Emprestimo | None:
         """Devolve o empréstimo com esse id, com leitor e livro, ou None."""
@@ -163,6 +184,7 @@ class EmprestimoRepositoryMemoria:
             id_leitor=emprestimo.id_leitor,
             id_exemplar=emprestimo.id_exemplar,
             data_emprestimo=emprestimo.data_emprestimo,
+            data_prevista_devolucao=emprestimo.data_prevista_devolucao,
             data_devolucao=None,
         )
         self.proximo_id += 1

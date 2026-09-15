@@ -28,6 +28,8 @@ MENSAGENS = {
 
 FORMATO_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 FORMATO_TELEFONE = re.compile(r"^[0-9()+\-\s]+$")
+# DDD + número: fixo tem 10 dígitos, celular tem 11.
+DIGITOS_TELEFONE = (10, 11)
 
 
 class Leitor(BaseModel):
@@ -60,11 +62,18 @@ class Leitor(BaseModel):
     @field_validator("telefone")
     @classmethod
     def validar_telefone(cls, telefone: str | None) -> str | None:
-        """Aceita só números e os símbolos comuns de telefone."""
-        if telefone is not None and not FORMATO_TELEFONE.match(telefone):
+        """Aceita só números e símbolos de telefone, com DDD: 10 dígitos (fixo) ou 11 (celular)."""
+        if telefone is None:
+            return None
+        if not FORMATO_TELEFONE.match(telefone):
             raise PydanticCustomError(
                 "telefone_invalido",
                 "O campo telefone deve ter só números, espaços, parênteses, + e -.",
+            )
+        if len(re.sub(r"\D", "", telefone)) not in DIGITOS_TELEFONE:
+            raise PydanticCustomError(
+                "telefone_incompleto",
+                "O campo telefone deve ter DDD e número: 10 dígitos (fixo) ou 11 (celular).",
             )
         return telefone
 
