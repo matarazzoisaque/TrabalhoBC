@@ -471,9 +471,12 @@ body::before {
     box-shadow: 0 8px 20px var(--shadow);
 }
 
+/* Ocupa toda a largura do .app (que já centraliza e limita em 1400px).
+   Sem o width: 100%, as margens "auto" fariam este flex item encolher até o
+   tamanho do conteúdo, deixando o catálogo espremido no meio da tela. */
 .catalog-wrap {
-    max-width: 1180px;
-    margin: 2rem auto 0;
+    width: 100%;
+    margin: 2rem 0 0;
     padding: 2rem 0;
 }
 
@@ -523,12 +526,20 @@ body::before {
     transform: translateX(125%);
 }
 
+/* Título à esquerda e botão à direita. Quando os dois não cabem lado a lado,
+   o botão desce para a linha de baixo em vez de colar no título. */
 .catalog-head {
     display: flex;
     align-items: end;
     justify-content: space-between;
-    gap: 1rem;
+    flex-wrap: wrap;
+    gap: 1rem 2.5rem;
     padding-bottom: 1rem;
+}
+
+.catalog-title-block {
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .catalog-title-block h1 {
@@ -541,6 +552,8 @@ body::before {
 .catalog-actions {
     display: flex;
     align-items: center;
+    /* O botão não encolhe nem quebra o texto no meio. */
+    flex: 0 0 auto;
 }
 
 .primary-button {
@@ -660,9 +673,11 @@ body::before {
     gap: 0.8rem;
 }
 
+/* Quantas colunas couberem na largura disponível, com os cards sempre do mesmo
+   tamanho. O min(100%, 270px) evita que o card estoure telas bem estreitas. */
 .catalog-list.exemplar-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr));
     gap: 1rem;
 }
 
@@ -1733,3 +1748,43 @@ body[data-theme="dark"] .button-danger {
     color: var(--danger);
 }
 
+
+/* Campo de busca com lista de sugestões (livro, leitor e exemplar nos formulários) */
+
+.campo-busca input {
+    width: 100%;
+}
+
+.busca-lista {
+    list-style: none;
+    margin: 0.35rem 0 0;
+    padding: 0.3rem;
+    max-height: 15rem;
+    overflow-y: auto;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: 0 10px 28px var(--shadow);
+}
+
+.busca-opcao,
+.busca-vazia {
+    padding: 0.55rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+.busca-opcao {
+    color: var(--text);
+    cursor: pointer;
+}
+
+.busca-opcao:hover,
+.busca-opcao.ativa {
+    background-color: var(--sage-very-light);
+}
+
+.busca-vazia {
+    color: var(--text-muted);
+    cursor: default;
+}
